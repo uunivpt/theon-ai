@@ -15,10 +15,10 @@ async function googleLogin() {
     alert("Login Successful ✅");
 
     router.push("/");
-  } catch (error) {
-    console.error(error);
-    alert("Login Failed ❌");
-  }
+  } catch (error: any) {
+  console.error(error);
+  alert(error.code + "\n\n" + error.message);
+}
 }
 async function emailLogin() {
   try {

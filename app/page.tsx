@@ -7,8 +7,16 @@ import ChatBubble from "../components/ChatBubble";
 import ChatInput from "../components/ChatInput";
 import TypingIndicator from "../components/TypingIndicator";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  getDocs,
+  query,
+  orderBy,
+} from "firebase/firestore";
 type Message = {
   role: "user" | "ai";
   text: string;
@@ -27,10 +35,25 @@ const [chats, setChats] = useState<Chat[]>([]);
 const [currentChatId, setCurrentChatId] = useState<number>(1);
   const chatRef = useRef<HTMLDivElement>(null);
 useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, (user) => {
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
     if (!user) {
       router.push("/login");
+      return;
     }
+
+    const q = query(
+      collection(db, "users", user.uid, "messages"),
+      orderBy("createdAt", "asc")
+    );
+
+    const snapshot = await getDocs(q);
+
+    const loadedMessages: Message[] = snapshot.docs.map((doc) => ({
+      role: doc.data().role,
+      text: doc.data().text,
+    }));
+
+    setMessages(loadedMessages);
   });
 
   return () => unsubscribe();
@@ -49,7 +72,16 @@ useEffect(() => {
     setMessage("");
     setMessages((prev) => [...prev, { role: "user", text: userText }]);
     setIsTyping(true);
-
+if (auth.currentUser) {
+  await addDoc(
+    collection(db, "users", auth.currentUser.uid, "messages"),
+    {
+      role: "user",
+      text: userText,
+      createdAt: serverTimestamp(),
+    }
+  );
+}
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -59,8 +91,23 @@ useEffect(() => {
 
       const data = await res.json();
 
-      setIsTyping(false);
-      setMessages((prev) => [...prev, { role: "ai", text: data.reply }]);
+     setIsTyping(false);
+
+setMessages((prev) => [
+  ...prev,
+  { role: "ai", text: data.reply },
+]);
+
+if (auth.currentUser) {
+  await addDoc(
+    collection(db, "users", auth.currentUser.uid, "messages"),
+    {
+      role: "ai",
+      text: data.reply,
+      createdAt: serverTimestamp(),
+    }
+  );
+}
     } catch {
       setIsTyping(false);
       setMessages((prev) => [

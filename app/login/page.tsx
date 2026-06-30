@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { signInWithPopup } from "firebase/auth";
@@ -86,9 +87,9 @@ async function emailLogin() {
 </button>
         <p className="text-center text-gray-400 mt-6">
           Don't have an account?{" "}
-          <button className="text-blue-400 hover:underline">
-            Create Account
-          </button>
+          <Link href="/signup" className="text-blue-400 hover:underline">
+  Create Account
+</Link>
         </p>
 
       </div>

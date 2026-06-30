@@ -29,15 +29,18 @@ export default function SignupPage() {
 
       alert("Account Created Successfully ✅");
       router.push("/login");
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("Something went wrong.");
+      }
     }
   }
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-black">
       <div className="w-full max-w-md bg-[#111827] p-8 rounded-3xl border border-gray-700">
-
         <h1 className="text-3xl font-bold text-white text-center mb-6">
           Create Account
         </h1>
@@ -80,7 +83,6 @@ export default function SignupPage() {
         >
           Create Account
         </button>
-
       </div>
     </main>
   );

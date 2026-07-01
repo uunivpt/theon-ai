@@ -320,13 +320,7 @@ export default function Home() {
 
 </div>
       
-        {messages.map((msg, index) => (
-          <ChatBubble
-            key={index}
-            role={msg.role}
-            text={msg.text}
-          />
-        ))}
+        
 
         {isTyping && (
   <div className="flex items-center gap-3">
@@ -345,10 +339,6 @@ export default function Home() {
     onChange={setMessage}
     onSend={sendMessage}
   />
-
-  {!keyboardOpen && (
-    <MobileBottomNav active="home" />
-  )}
 
   <MobileSidebar
     open={mobileSidebarOpen}

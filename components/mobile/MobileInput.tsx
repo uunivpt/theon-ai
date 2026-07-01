@@ -12,7 +12,7 @@ export default function MobileInput({
   onSend,
 }: Props) {
   return (
-    <div className="fixed bottom-24 left-5 right-5 z-30 md:hidden">
+    <div className="fixed bottom-10 left-5 right-5 z-30 md:hidden">
 
       {/* Glow */}
       <div className="absolute inset-0 rounded-full bg-violet-600/20 blur-3xl" />

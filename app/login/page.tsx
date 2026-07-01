@@ -1,37 +1,53 @@
 "use client";
+
 import Link from "next/link";
 import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { signInWithPopup } from "firebase/auth";
+import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { auth, provider } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
+
 export default function LoginPage() {
-const router = useRouter();
-const [email, setEmail] = useState("");
-const [password, setPassword] = useState("");
-async function googleLogin() {
-  try {
-    await signInWithPopup(auth, provider);
+  const router = useRouter();
 
-    alert("Login Successful ✅");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-    router.push("/");
-  } catch (error: any) {
-  console.error(error);
-  alert(error.code + "\n\n" + error.message);
-}
-}
-async function emailLogin() {
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
+  async function googleLogin() {
+    try {
+      await signInWithPopup(auth, provider);
 
-    alert("Login Successful ✅");
+      alert("Login Successful ✅");
 
-    router.push("/");
-  } catch (error: any) {
-    alert(error.message);
+      router.push("/");
+    } catch (error: unknown) {
+      console.error(error);
+
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("Google login failed.");
+      }
+    }
   }
-}
+
+  async function emailLogin() {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+
+      alert("Login Successful ✅");
+
+      router.push("/");
+    } catch (error: unknown) {
+      console.error(error);
+
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("Login failed.");
+      }
+    }
+  }
+
   return (
     <main className="min-h-screen bg-black flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-[#111827] rounded-3xl p-8 shadow-2xl border border-gray-800">
@@ -45,11 +61,11 @@ async function emailLogin() {
         </p>
 
         <button
-  onClick={googleLogin}
-  className="w-full h-14 rounded-2xl bg-white text-black font-semibold hover:bg-gray-200 transition"
->
-  Continue with Google
-</button>
+          onClick={googleLogin}
+          className="w-full h-14 rounded-2xl bg-white text-black font-semibold hover:bg-gray-200 transition"
+        >
+          Continue with Google
+        </button>
 
         <div className="flex items-center gap-3 my-6">
           <div className="flex-1 h-px bg-gray-700"></div>
@@ -58,20 +74,20 @@ async function emailLogin() {
         </div>
 
         <input
-  type="email"
-  placeholder="Email"
-  value={email}
-  onChange={(e) => setEmail(e.target.value)}
-  className="w-full h-14 rounded-2xl bg-[#1f2937] text-white px-5 mb-4 outline-none border border-gray-700 focus:border-blue-500"
-/>
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full h-14 rounded-2xl bg-[#1f2937] text-white px-5 mb-4 outline-none border border-gray-700 focus:border-blue-500"
+        />
 
         <input
-  type="password"
-  placeholder="Password"
-  value={password}
-  onChange={(e) => setPassword(e.target.value)}
-  className="w-full h-14 rounded-2xl bg-[#1f2937] text-white px-5 outline-none border border-gray-700 focus:border-blue-500"
-/>
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full h-14 rounded-2xl bg-[#1f2937] text-white px-5 outline-none border border-gray-700 focus:border-blue-500"
+        />
 
         <div className="text-right mt-3">
           <button className="text-blue-400 text-sm hover:underline">
@@ -79,17 +95,21 @@ async function emailLogin() {
           </button>
         </div>
 
-       <button
-  onClick={emailLogin}
-  className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold mt-6"
->
-  Login
-</button>
+        <button
+          onClick={emailLogin}
+          className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold mt-6"
+        >
+          Login
+        </button>
+
         <p className="text-center text-gray-400 mt-6">
-          Don't have an account?{" "}
-          <Link href="/signup" className="text-blue-400 hover:underline">
-  Create Account
-</Link>
+          Don&apos;t have an account?{" "}
+          <Link
+            href="/signup"
+            className="text-blue-400 hover:underline"
+          >
+            Create Account
+          </Link>
         </p>
 
       </div>

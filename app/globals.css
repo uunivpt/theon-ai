@@ -18,3 +18,26 @@
     --foreground: #ededed;
   }
 }
+.katex-display {
+  display: block;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.prose {
+  max-width: 100%;
+}
+
+.prose p,
+.prose div {
+  overflow-wrap: anywhere;
+}
+
+.prose img,
+.prose table,
+.prose pre {
+  max-width: 100%;
+  overflow-x: auto;
+}

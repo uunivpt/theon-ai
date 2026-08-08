@@ -2,42 +2,19 @@
 
 import { ImagePlus, ArrowUp } from "lucide-react";
 
-type Props = {
-  value: string;
-  onChange: (value: string) => void;
-  onSend: () => void;
-};
+type Props = { value: string; onChange: (value: string) => void; onSend: () => void };
 
 export default function MobileInput({ value, onChange, onSend }: Props) {
   return (
-    <div className="fixed bottom-5 left-4 right-4 z-30 md:hidden">
-      <div className="pointer-events-none absolute inset-0 rounded-full bg-violet-600/15 blur-2xl" />
-
-      <div className="relative flex h-[66px] items-center rounded-full border border-white/[0.11] bg-[#0b0b13]/95 pl-5 pr-2 shadow-[0_8px_35px_rgba(0,0,0,.45),0_0_35px_rgba(124,58,237,.12)] backdrop-blur-2xl">
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") onSend();
-          }}
-          placeholder="Ask anything..."
-          className="h-full min-w-0 flex-1 bg-transparent pr-3 text-[15px] text-white outline-none placeholder:text-white/35"
-        />
-
-        <button
-          type="button"
-          aria-label="Add image"
-          className="mr-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/45 transition hover:bg-white/5 hover:text-white/70"
-        >
-          <ImagePlus size={21} strokeWidth={1.8} />
+    <div className="fixed bottom-[max(14px,env(safe-area-inset-bottom))] left-3 right-3 z-30 md:hidden">
+      <div className="pointer-events-none absolute inset-1 rounded-[28px] bg-violet-600/[0.10] blur-2xl" />
+      <div className="relative flex min-h-[62px] items-center rounded-[24px] border border-white/[0.10] bg-[#0a0a12]/[0.96] pl-4 pr-1.5 shadow-[0_12px_45px_rgba(0,0,0,.48),0_0_28px_rgba(124,58,237,.10)] backdrop-blur-2xl">
+        <input value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onSend(); }} placeholder="Ask anything..." className="h-[58px] min-w-0 flex-1 bg-transparent pr-2 text-[15px] text-white outline-none placeholder:text-white/30" />
+        <button type="button" aria-label="Add image" className="mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/35 transition hover:bg-white/[0.05] hover:text-white/65">
+          <ImagePlus size={19} strokeWidth={1.7} />
         </button>
-
-        <button
-          onClick={onSend}
-          aria-label="Send message"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 via-purple-500 to-cyan-400 text-white shadow-[0_0_25px_rgba(124,58,237,.45)] transition active:scale-95"
-        >
-          <ArrowUp size={22} strokeWidth={2.2} />
+        <button onClick={onSend} aria-label="Send message" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br from-violet-600 via-purple-500 to-cyan-400 text-white shadow-[0_0_24px_rgba(124,58,237,.35)] transition active:scale-95">
+          <ArrowUp size={20} strokeWidth={2.2} />
         </button>
       </div>
     </div>

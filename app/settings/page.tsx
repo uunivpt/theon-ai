@@ -1,57 +1,34 @@
 "use client";
 
-import { ArrowLeft, Moon, ShieldCheck, Sun } from "lucide-react";
+import { ArrowLeft, Check, Download, Moon, Search, ShieldCheck, Sun, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { auth } from "@/lib/firebase";
+import { deleteAllChats, loadChats, loadMessages, type ChatSummary } from "@/lib/chat-history";
+
+type Theme = "dark" | "light" | "system";
+type Settings = { theme: Theme; enterToSend: boolean; autoScroll: boolean; speed: "fast" | "normal"; style: "balanced" | "concise" | "detailed"; explanation: "simple" | "normal" | "deep"; language: "auto" | "english" | "marathi" | "hindi" };
+const defaults: Settings = { theme: "dark", enterToSend: true, autoScroll: true, speed: "fast", style: "balanced", explanation: "normal", language: "auto" };
+
+function readSettings(): Settings { try { return { ...defaults, ...JSON.parse(localStorage.getItem("theon-settings") || "{}")} as Settings; } catch { return defaults; } }
+function applyTheme(theme: Theme) { const resolved = theme === "system" ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark") : theme; document.documentElement.classList.toggle("light", resolved === "light"); }
 
 export default function SettingsPage() {
-  const router = useRouter();
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem("theon-theme");
-    const nextTheme = saved === "light" ? "light" : "dark";
-    setTheme(nextTheme);
-    document.documentElement.classList.toggle("light", nextTheme === "light");
-  }, []);
-
-  function changeTheme(nextTheme: "dark" | "light") {
-    setTheme(nextTheme);
-    window.localStorage.setItem("theon-theme", nextTheme);
-    document.documentElement.classList.toggle("light", nextTheme === "light");
-  }
-
-  return (
-    <main className="min-h-screen bg-[#05050a] px-5 py-8 text-white">
-      <div className="mx-auto max-w-2xl">
-        <button onClick={() => router.push("/")} className="mb-8 flex items-center gap-2 text-sm text-white/50 hover:text-white">
-          <ArrowLeft size={17} /> Back to Theon
-        </button>
-        <h1 className="text-3xl font-semibold">Settings</h1>
-        <p className="mt-2 text-sm text-white/40">Manage your Theon AI experience.</p>
-
-        <div className="mt-8 space-y-3">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-            <div className="flex items-center gap-4">
-              {theme === "light" ? <Sun size={20} className="text-violet-500" /> : <Moon size={20} className="text-violet-300" />}
-              <div><p className="font-medium">Appearance</p><p className="text-xs text-white/35">Choose how Theon looks across the app.</p></div>
-            </div>
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <button onClick={() => changeTheme("dark")} className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm transition ${theme === "dark" ? "border-violet-400/50 bg-violet-500/15 text-white" : "border-white/10 bg-white/[0.03] text-white/45 hover:text-white"}`}>
-                <Moon size={16} /> Dark
-              </button>
-              <button onClick={() => changeTheme("light")} className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm transition ${theme === "light" ? "border-violet-400/50 bg-violet-500/15 text-white" : "border-white/10 bg-white/[0.03] text-white/45 hover:text-white"}`}>
-                <Sun size={16} /> Light
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-            <ShieldCheck size={20} className="text-cyan-300" />
-            <div><p className="font-medium">Privacy</p><p className="text-xs text-white/35">Your conversations are stored under your authenticated account.</p></div>
-          </div>
-        </div>
-      </div>
-    </main>
-  );
+  const router = useRouter(); const [settings, setSettings] = useState<Settings>(defaults); const [chats, setChats] = useState<ChatSummary[]>([]); const [search, setSearch] = useState(""); const [busy, setBusy] = useState(false); const [status, setStatus] = useState("");
+  useEffect(() => { const next = readSettings(); setSettings(next); applyTheme(next.theme); const user = auth.currentUser; if (user) loadChats(user.uid).then(setChats).catch(console.error); }, []);
+  function save(patch: Partial<Settings>) { const next = { ...settings, ...patch }; setSettings(next); localStorage.setItem("theon-settings", JSON.stringify(next)); if (patch.theme) { localStorage.setItem("theon-theme", patch.theme === "system" ? "dark" : patch.theme); applyTheme(next.theme); } }
+  async function clearAll() { const user = auth.currentUser; if (!user || busy) return; if (!window.confirm("Delete all conversations? This cannot be undone.")) return; setBusy(true); try { await deleteAllChats(user.uid); setChats([]); setStatus("All conversations deleted."); } catch { setStatus("Could not delete conversations. Please try again."); } finally { setBusy(false); } }
+  async function exportChats() { const user = auth.currentUser; if (!user || busy) return; setBusy(true); try { const all = await loadChats(user.uid); const data = []; for (const chat of all) data.push({ ...chat, messages: await loadMessages(user.uid, chat.id) }); const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `theon-chats-${new Date().toISOString().slice(0, 10)}.json`; a.click(); URL.revokeObjectURL(url); setStatus("Conversation export downloaded."); } catch { setStatus("Could not export conversations."); } finally { setBusy(false); } }
+  const filtered = chats.filter((c) => `${c.title} ${c.preview || ""}`.toLowerCase().includes(search.toLowerCase()));
+  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => <section className="rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-6"><h2 className="text-[15px] font-semibold text-white/90">{title}</h2><div className="mt-5 space-y-4">{children}</div></section>;
+  const Toggle = ({ value, onChange, label, hint }: { value: boolean; onChange: (v: boolean) => void; label: string; hint: string }) => <button type="button" onClick={() => onChange(!value)} className="flex w-full items-center justify-between gap-4 text-left"><div><p className="text-sm text-white/80">{label}</p><p className="mt-1 text-[11px] leading-5 text-white/30">{hint}</p></div><span className={`relative h-6 w-11 shrink-0 rounded-full transition ${value ? "bg-violet-500" : "bg-white/10"}`}><span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${value ? "left-6" : "left-1"}`} /></span></button>;
+  return <main className="min-h-screen bg-[#05050a] px-4 py-6 text-white sm:px-6 sm:py-8"><div className="mx-auto max-w-3xl"><button onClick={() => router.push("/")} className="mb-7 flex items-center gap-2 text-sm text-white/50 hover:text-white"><ArrowLeft size={17}/> Back to Theon</button><h1 className="text-3xl font-semibold">Settings</h1><p className="mt-2 text-sm text-white/40">Manage your Theon AI experience.</p><div className="mt-7 space-y-4">
+    <Section title="Appearance"><div className="grid grid-cols-3 gap-2">{(["dark","light","system"] as Theme[]).map((t) => <button key={t} onClick={() => save({ theme: t })} className={`rounded-xl border px-3 py-3 text-sm capitalize ${settings.theme === t ? "border-violet-400/50 bg-violet-500/15 text-white" : "border-white/10 bg-white/[.02] text-white/45"}`}>{t === "dark" ? <Moon className="mx-auto mb-1" size={16}/> : t === "light" ? <Sun className="mx-auto mb-1" size={16}/> : <span className="mb-1 block">◐</span>}{t}</button>)}</div></Section>
+    <Section title="Chat"><Toggle value={settings.enterToSend} onChange={(v) => save({ enterToSend: v })} label="Enter to send" hint="Press Enter to send; use Shift + Enter for a new line."/><Toggle value={settings.autoScroll} onChange={(v) => save({ autoScroll: v })} label="Auto-scroll" hint="Keep the latest response in view while Theon replies."/><div><p className="text-sm text-white/80">Response speed</p><div className="mt-2 grid grid-cols-2 gap-2">{(["fast","normal"] as const).map((v) => <button key={v} onClick={() => save({ speed: v })} className={`rounded-xl border px-3 py-2.5 text-xs capitalize ${settings.speed === v ? "border-violet-400/40 bg-violet-500/10 text-white" : "border-white/10 text-white/40"}`}>{v}</button>)}</div></div></Section>
+    <Section title="AI preferences"><div><p className="text-sm text-white/80">Response style</p><div className="mt-2 grid grid-cols-3 gap-2">{(["balanced","concise","detailed"] as const).map((v) => <button key={v} onClick={() => save({ style: v })} className={`rounded-xl border px-2 py-2.5 text-xs capitalize ${settings.style === v ? "border-violet-400/40 bg-violet-500/10 text-white" : "border-white/10 text-white/40"}`}>{v}</button>)}</div></div><div><p className="text-sm text-white/80">Explanation level</p><div className="mt-2 grid grid-cols-3 gap-2">{(["simple","normal","deep"] as const).map((v) => <button key={v} onClick={() => save({ explanation: v })} className={`rounded-xl border px-2 py-2.5 text-xs capitalize ${settings.explanation === v ? "border-violet-400/40 bg-violet-500/10 text-white" : "border-white/10 text-white/40"}`}>{v}</button>)}</div></div><div><p className="text-sm text-white/80">Language</p><select value={settings.language} onChange={(e) => save({ language: e.target.value as Settings["language"] })} className="mt-2 w-full rounded-xl border border-white/10 bg-[#0a0a10] px-3 py-3 text-sm text-white"><option value="auto">Auto detect</option><option value="english">English</option><option value="marathi">Marathi</option><option value="hindi">Hindi</option></select></div></Section>
+    <Section title="Chat history"><div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2"><Search size={16} className="text-white/30"/><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search conversations..." className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/25"/></div><div className="max-h-52 space-y-1 overflow-y-auto">{filtered.map((chat) => <button key={chat.id} onClick={() => router.push(`/?chat=${chat.id}`)} className="flex w-full items-center rounded-xl px-3 py-2.5 text-left hover:bg-white/[.04]"><span className="truncate text-sm text-white/65">{chat.title}</span></button>)}{filtered.length === 0 && <p className="px-2 py-3 text-xs text-white/25">No matching conversations.</p>}</div><div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><button onClick={exportChats} disabled={busy} className="flex items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-3 text-sm text-white/60 hover:text-white disabled:opacity-40"><Download size={16}/> Export conversations</button><button onClick={clearAll} disabled={busy} className="flex items-center justify-center gap-2 rounded-xl border border-red-400/15 px-3 py-3 text-sm text-red-300/80 hover:bg-red-500/10 disabled:opacity-40"><Trash2 size={16}/> Delete all conversations</button></div></Section>
+    <Section title="Privacy & data"><div className="flex gap-3"><ShieldCheck size={20} className="shrink-0 text-cyan-300"/><div><p className="text-sm text-white/80">Your conversations are stored under your authenticated account.</p><p className="mt-2 text-[11px] leading-5 text-white/30">PDF files are processed temporarily for analysis and are not saved as files in chat history. Only the conversation text and AI response are stored.</p></div></div></Section>
+    <Section title="Account"><button onClick={() => router.push("/profile")} className="flex w-full items-center justify-between rounded-xl px-2 py-3 text-left text-sm text-white/70 hover:bg-white/[.04]">Profile <span className="text-white/25">→</span></button></Section>
+    {status && <div className="flex items-center gap-2 rounded-xl border border-emerald-400/15 bg-emerald-400/[.05] px-4 py-3 text-xs text-emerald-200"><Check size={15}/>{status}</div>}
+  </div></div></main>;
 }

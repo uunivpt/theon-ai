@@ -17,40 +17,32 @@ async function compressImage(file: File): Promise<Attachment> {
   try {
     const image = new Image(); image.decoding = "async"; image.src = sourceUrl; await image.decode();
     const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(image.naturalWidth, image.naturalHeight));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-    const context = canvas.getContext("2d"); if (!context) throw new Error("Image processing is unavailable on this device");
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    let quality = 0.82; let dataUrl = canvas.toDataURL("image/jpeg", quality);
-    while (dataUrl.length > MAX_IMAGE_DATA_URL_LENGTH && quality > 0.5) { quality -= 0.08; dataUrl = canvas.toDataURL("image/jpeg", quality); }
+    const canvas = document.createElement("canvas"); canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext("2d"); if (!context) throw new Error("Image processing is unavailable on this device"); context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    let quality = 0.82; let dataUrl = canvas.toDataURL("image/jpeg", quality); while (dataUrl.length > MAX_IMAGE_DATA_URL_LENGTH && quality > 0.5) { quality -= 0.08; dataUrl = canvas.toDataURL("image/jpeg", quality); }
     return { name: file.name, type: "image/jpeg", dataUrl };
   } finally { URL.revokeObjectURL(sourceUrl); }
 }
 
 async function extractPdfText(file: File): Promise<Attachment> {
   if (file.size > MAX_PDF_SIZE) throw new Error("PDF is too large. Please upload a PDF smaller than 6 MB.");
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  // Keep the worker URL on the exact same version as the installed pdfjs-dist API.
-  const pdfVersion = String(pdfjs.version || "5.7.284");
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfVersion}/pdf.worker.min.mjs`;
-  const pdf = await pdfjs.getDocument({ data: bytes }).promise;
-  let text = "";
-  for (let pageNumber = 1; pageNumber <= pdf.numPages && text.length < MAX_PDF_TEXT; pageNumber += 1) {
-    const page = await pdf.getPage(pageNumber); const content = await page.getTextContent();
-    const pageText = content.items.map((item: any) => typeof item?.str === "string" ? item.str : "").join(" ").replace(/\s+/g, " ").trim();
-    if (pageText) text += `\n\n--- Page ${pageNumber} ---\n${pageText}`;
-    page.cleanup();
-  }
-  text = text.trim().slice(0, MAX_PDF_TEXT);
-  if (!text) throw new Error("This PDF appears to be scanned/image-only. Text could not be extracted yet.");
+  const bytes = new Uint8Array(await file.arrayBuffer()); const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const pdfVersion = String(pdfjs.version || "5.4.54"); pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfVersion}/pdf.worker.min.mjs`;
+  const pdf = await pdfjs.getDocument({ data: bytes }).promise; let text = "";
+  for (let pageNumber = 1; pageNumber <= pdf.numPages && text.length < MAX_PDF_TEXT; pageNumber += 1) { const page = await pdf.getPage(pageNumber); const content = await page.getTextContent(); const pageText = content.items.map((item: any) => typeof item?.str === "string" ? item.str : "").join(" ").replace(/\s+/g, " ").trim(); if (pageText) text += `\n\n--- Page ${pageNumber} ---\n${pageText}`; page.cleanup(); }
+  text = text.trim().slice(0, MAX_PDF_TEXT); if (!text) throw new Error("This PDF appears to be scanned/image-only. Text could not be extracted yet.");
   return { name: file.name, type: "application/pdf", dataUrl: "", extractedText: text };
+}
+
+export async function processAttachmentFiles(files: File[]): Promise<Attachment[]> {
+  const accepted = files.slice(0, 4);
+  return Promise.all(accepted.map((file) => file.type === "application/pdf" ? extractPdfText(file) : compressImage(file)));
 }
 
 export default function FeatureInput({ feature, value, onChange, onSend, onClearFeature, disabled = false }: Props) {
   const galleryRef = useRef<HTMLInputElement>(null); const cameraRef = useRef<HTMLInputElement>(null); const pdfRef = useRef<HTMLInputElement>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]); const [processing, setProcessing] = useState(false); const [error, setError] = useState(""); const [showPicker, setShowPicker] = useState(false);
-  async function addFiles(files: FileList | null) { if (!files) return; setError(""); setShowPicker(false); const accepted = Array.from(files).slice(0, 4); if (!accepted.length) return; setProcessing(true); try { const next = await Promise.all(accepted.map((file) => file.type === "application/pdf" ? extractPdfText(file) : compressImage(file))); setAttachments((current) => [...current, ...next].slice(0, 4)); } catch (e) { console.error(e); setError(e instanceof Error ? e.message : "Could not process the attachment."); } finally { setProcessing(false); } }
+  async function addFiles(files: FileList | null) { if (!files) return; setError(""); setShowPicker(false); const accepted = Array.from(files).slice(0, 4); if (!accepted.length) return; setProcessing(true); try { const next = await processAttachmentFiles(accepted); setAttachments((current) => [...current, ...next].slice(0, 4)); } catch (e) { console.error(e); setError(e instanceof Error ? e.message : "Could not process the attachment."); } finally { setProcessing(false); } }
   function sendAttachments() { if (!canSend || processing) return; const pending = attachments; setAttachments([]); onSend(pending); }
   const canSend = !disabled && !processing && (value.trim().length > 0 || attachments.length > 0);
   return <div className="fixed bottom-[max(10px,env(safe-area-inset-bottom))] left-3 right-3 z-30 lg:hidden">

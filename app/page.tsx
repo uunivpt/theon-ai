@@ -178,13 +178,16 @@ export default function Home() {
       if (!chatId) {
         chatId = await createChat(user.uid, makeTitle(userText));
         setCurrentChatId(chatId);
-        setChats((prev) => [{ id: chatId!, title: makeTitle(userText), preview: userText }, ...prev]);
+        setChats((prev) => [{ id: chatId as string, title: makeTitle(userText), preview: userText }, ...prev]);
       } else if (firstMessage) {
         await updateChatPreview(user.uid, chatId, userText, makeTitle(userText));
         setChats((prev) => prev.map((chat) => chat.id === chatId ? { ...chat, title: makeTitle(userText), preview: userText } : chat));
       }
 
-      await saveMessage(user.uid, chatId, "user", userText);
+      const activeChatId = chatId;
+      if (!activeChatId) throw new Error("Unable to create or select a chat");
+
+      await saveMessage(user.uid, activeChatId, "user", userText);
       setMessages((prev) => [...prev, { role: "user", text: userText }]);
       setIsTyping(true);
 
@@ -197,11 +200,14 @@ export default function Home() {
       if (!res.ok || typeof data.reply !== "string") throw new Error(data.error || "AI request failed");
 
       const fullText = data.reply.trim();
-      await saveMessage(user.uid, chatId, "ai", fullText);
-      setChats((prev) => [
-        { ...(prev.find((chat) => chat.id === chatId) ?? { id: chatId, title: makeTitle(userText) }), preview: fullText },
-        ...prev.filter((chat) => chat.id !== chatId),
-      ]);
+      await saveMessage(user.uid, activeChatId, "ai", fullText);
+      setChats((prev) => {
+        const existing = prev.find((chat) => chat.id === activeChatId);
+        const updated: ChatSummary = existing
+          ? { ...existing, preview: fullText }
+          : { id: activeChatId, title: makeTitle(userText), preview: fullText };
+        return [updated, ...prev.filter((chat) => chat.id !== activeChatId)];
+      });
       animateResponse(fullText);
     } catch (error) {
       console.error("Chat error", error);

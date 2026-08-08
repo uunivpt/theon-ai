@@ -1,47 +1,28 @@
 "use client";
 
-import { Menu, Crown, Bell } from "lucide-react";
+import { Menu, Settings } from "lucide-react";
 
 type Props = {
   onMenu: () => void;
 };
 
-export default function MobileHeader({
-  onMenu,
-}: Props) {
+export default function MobileHeader({ onMenu }: Props) {
   return (
-    <header className="flex items-center justify-between px-5 pt-5">
-
-      {/* Left */}
+    <header className="relative flex items-center justify-between px-5 pt-5">
       <button
         onClick={onMenu}
-        className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl transition hover:bg-white/10"
+        aria-label="Open menu"
+        className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.025] text-white/65 backdrop-blur-xl transition hover:bg-white/[0.06]"
       >
-        <Menu size={23} />
+        <Menu size={22} strokeWidth={1.8} />
       </button>
 
-      {/* Center */}
-      <div className="text-center">
-
-        <h1 className="bg-gradient-to-r from-violet-400 via-fuchsia-300 to-cyan-300 bg-clip-text text-2xl font-extrabold text-transparent">
-          Theon AI
-        </h1>
-
-        <p className="text-xs text-gray-400">
-          AI Assistant
-        </p>
-
-      </div>
-
-      {/* Right */}
-      <button className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl transition hover:bg-white/10">
-
-        <Bell size={21} />
-
-        <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-violet-500" />
-
+      <button
+        aria-label="Settings"
+        className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.025] text-white/65 backdrop-blur-xl transition hover:bg-white/[0.06]"
+      >
+        <Settings size={20} strokeWidth={1.8} />
       </button>
-
     </header>
   );
 }

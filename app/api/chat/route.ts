@@ -46,6 +46,8 @@ const MAX_IMAGE_DATA_URL_LENGTH = 3_500_000;
 const MAX_PDF_TEXT = 120_000;
 const AICREDITS_BASE_URL = "https://api.aicredits.in/v1";
 const MODEL = "google/gemini-2.0-flash";
+const REQUEST_TIMEOUT_MS = 45_000;
+const MAX_RETRIES = 2;
 
 function extractResponseText(payload: any) {
   if (typeof payload?.output_text === "string") return payload.output_text.trim();
@@ -57,6 +59,20 @@ function preferencesInstruction(p: Preferences) {
   const explanation = p.explanation === "simple" ? "Prefer simple explanations and approachable examples." : p.explanation === "deep" ? "Explain deeply and include important reasoning and context." : "Use a normal explanation depth.";
   const language = p.language === "english" ? "Reply in English." : p.language === "marathi" ? "Reply in Marathi." : p.language === "hindi" ? "Reply in Hindi." : "Automatically match the user's language and writing style.";
   return `User preferences: ${style} ${explanation} ${language}`;
+}
+async function fetchWithTimeout(url: string, init: RequestInit) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try { return await fetch(url, { ...init, signal: controller.signal }); }
+  finally { clearTimeout(timer); }
+}
+async function withRetry<T>(operation: () => Promise<T>) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try { return await operation(); }
+    catch (error) { lastError = error; if (attempt < MAX_RETRIES) await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt)); }
+  }
+  throw lastError;
 }
 
 export async function POST(req: Request) {
@@ -78,13 +94,14 @@ export async function POST(req: Request) {
     const pdfs = validAttachments.filter((file) => file.type === "application/pdf");
     if (pdfs.length > 0) {
       const documentText = pdfs.map((file) => `\n\n===== PDF: ${file.name} =====\n${file.extractedText!.slice(0, MAX_PDF_TEXT)}`).join("\n");
-      const response = await fetch(`${AICREDITS_BASE_URL}/responses`, { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, instructions: [SYSTEM_PROMPT, featureInstruction, preferenceInstruction].filter(Boolean).join("\n\n"), input: [{ role: "user", content: [{ type: "input_text", text: `${message || "Read this PDF and give me a useful overview."}\n\n${documentText}` }] }] }) });
-      const payload = await response.json().catch(() => ({})); if (!response.ok) { console.error("AICredits PDF analysis error", response.status, payload); return Response.json({ error: "I couldn't analyze this PDF. Please try again." }, { status: 502 }); }
+      const response = await withRetry(() => fetchWithTimeout(`${AICREDITS_BASE_URL}/responses`, { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, instructions: [SYSTEM_PROMPT, featureInstruction, preferenceInstruction].filter(Boolean).join("\n\n"), input: [{ role: "user", content: [{ type: "input_text", text: `${message || "Read this PDF and give me a useful overview."}\n\n${documentText}` }] }] }) }));
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) { console.error("AICredits PDF analysis error", response.status, payload); return Response.json({ error: "I couldn't analyze this PDF. Please try again." }, { status: 502 }); }
       const reply = extractResponseText(payload); if (!reply) return Response.json({ error: "The PDF was read, but the AI returned an empty response." }, { status: 502 }); return Response.json({ reply });
     }
     const userContent: any[] = []; if (message) userContent.push({ type: "text", text: message }); for (const file of validAttachments) if (file.type.startsWith("image/")) userContent.push({ type: "image_url", image_url: { url: file.dataUrl } });
     const ai = new OpenAI({ apiKey, baseURL: AICREDITS_BASE_URL });
-    const completion = await ai.chat.completions.create({ model: MODEL, messages: [{ role: "system", content: SYSTEM_PROMPT }, { role: "system", content: preferenceInstruction }, ...(featureInstruction ? [{ role: "system" as const, content: featureInstruction }] : []), ...safeHistory, { role: "user", content: userContent.length === 1 && userContent[0].type === "text" ? message : userContent } as any] });
+    const completion = await withRetry(() => ai.chat.completions.create({ model: MODEL, messages: [{ role: "system", content: SYSTEM_PROMPT }, { role: "system", content: preferenceInstruction }, ...(featureInstruction ? [{ role: "system" as const, content: featureInstruction }] : []), ...safeHistory, { role: "user", content: userContent.length === 1 && userContent[0].type === "text" ? message : userContent } as any] }));
     const reply = completion.choices[0]?.message?.content?.trim(); if (!reply) return Response.json({ error: "The AI returned an empty response." }, { status: 502 }); return Response.json({ reply });
   } catch (error) { console.error("Theon AI request failed", error); return Response.json({ error: "I couldn't complete that request. Please try again." }, { status: 500 }); }
 }

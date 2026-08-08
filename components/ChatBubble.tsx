@@ -30,48 +30,23 @@ export default function ChatBubble({ role, text }: ChatBubbleProps) {
   }
 
   return (
-    <div className={`flex w-full items-end gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex w-full items-start gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && (
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.045] shadow-[0_0_22px_rgba(139,92,246,.18)]">
-          <Image
-            src="/logo.png"
-            alt="Theon AI"
-            width={36}
-            height={36}
-            className="h-8 w-8 object-contain [image-rendering:pixelated]"
-          />
+        <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black">
+          <Image src="/logo.png" alt="Theon AI" width={36} height={36} className="h-8 w-8 object-contain [image-rendering:pixelated]" />
         </div>
       )}
 
-      <div
-        className={`relative max-w-[85%] overflow-hidden rounded-3xl border px-5 py-4 shadow-xl ${
-          isUser
-            ? "border-blue-500/60 bg-blue-600 text-white"
-            : "border-white/10 bg-white/10 text-white backdrop-blur-2xl"
-        }`}
-      >
+      <div className={`relative max-w-[84%] overflow-hidden rounded-[20px] border px-4 py-3.5 shadow-none ${isUser ? "rounded-br-[7px] border-violet-500/55 bg-[#35116f] text-white" : "rounded-bl-[7px] border-white/[0.12] bg-[#0b0b0b] text-white"}`}>
         {!isUser && text && (
-          <button
-            onClick={copyMessage}
-            aria-label="Copy response"
-            className="absolute right-3 top-3 rounded-lg bg-white/10 p-2 transition hover:bg-white/20"
-          >
-            {copied ? <Check size={16} /> : <Copy size={16} />}
+          <button onClick={copyMessage} aria-label="Copy response" className="absolute right-2.5 top-2.5 rounded-lg p-1.5 text-white/40 transition hover:bg-white/10 hover:text-white/75">
+            {copied ? <Check size={15} /> : <Copy size={15} />}
           </button>
         )}
-
-        <div className="prose prose-invert max-w-none overflow-x-auto break-words pr-9 prose-pre:overflow-x-auto prose-code:break-all">
-          <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
-            {text}
-          </ReactMarkdown>
+        <div className="prose prose-invert max-w-none overflow-x-auto break-words pr-7 text-[15px] leading-[1.55] prose-p:my-0 prose-pre:overflow-x-auto prose-code:break-all">
+          <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{text}</ReactMarkdown>
         </div>
       </div>
-
-      {isUser && (
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.07] text-sm text-white/75">
-          You
-        </div>
-      )}
     </div>
   );
 }

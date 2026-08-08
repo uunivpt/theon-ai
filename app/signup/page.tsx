@@ -2,86 +2,58 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 export default function SignupPage() {
   const router = useRouter();
-
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function createAccount() {
-    if (!name || !email || !password || !confirmPassword) {
+    const cleanName = name.trim();
+    const cleanEmail = email.trim();
+    if (!cleanName || !cleanEmail || !password || !confirmPassword) {
       alert("Please fill all fields");
       return;
     }
-
+    if (password.length < 6) {
+      alert("Password must be at least 6 characters.");
+      return;
+    }
     if (password !== confirmPassword) {
       alert("Passwords do not match");
       return;
     }
 
+    setLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-
-      alert("Account Created Successfully ✅");
-      router.push("/login");
+      const credential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
+      await updateProfile(credential.user, { displayName: cleanName });
+      router.replace("/");
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        alert(error.message);
-      } else {
-        alert("Something went wrong.");
-      }
+      console.error(error);
+      alert(error instanceof Error ? error.message : "Something went wrong.");
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-black">
-      <div className="w-full max-w-md bg-[#111827] p-8 rounded-3xl border border-gray-700">
-        <h1 className="text-3xl font-bold text-white text-center mb-6">
-          Create Account
-        </h1>
+    <main className="flex min-h-screen items-center justify-center bg-black px-4">
+      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#111827] p-8">
+        <h1 className="mb-6 text-center text-3xl font-bold text-white">Create Account</h1>
 
-        <input
-          type="text"
-          placeholder="Full Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full h-14 rounded-xl bg-[#1f2937] text-white px-4 mb-4 outline-none"
-        />
+        <input type="text" placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} className="mb-4 h-14 w-full rounded-xl border border-white/10 bg-[#1f2937] px-4 text-white outline-none focus:border-violet-500" />
+        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="mb-4 h-14 w-full rounded-xl border border-white/10 bg-[#1f2937] px-4 text-white outline-none focus:border-violet-500" />
+        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="mb-4 h-14 w-full rounded-xl border border-white/10 bg-[#1f2937] px-4 text-white outline-none focus:border-violet-500" />
+        <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && createAccount()} className="mb-6 h-14 w-full rounded-xl border border-white/10 bg-[#1f2937] px-4 text-white outline-none focus:border-violet-500" />
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full h-14 rounded-xl bg-[#1f2937] text-white px-4 mb-4 outline-none"
-        />
-
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full h-14 rounded-xl bg-[#1f2937] text-white px-4 mb-4 outline-none"
-        />
-
-        <input
-          type="password"
-          placeholder="Confirm Password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          className="w-full h-14 rounded-xl bg-[#1f2937] text-white px-4 mb-6 outline-none"
-        />
-
-        <button
-          onClick={createAccount}
-          className="w-full h-14 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-        >
-          Create Account
+        <button disabled={loading} onClick={createAccount} className="h-14 w-full rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 font-semibold text-white disabled:opacity-50">
+          {loading ? "Creating account..." : "Create Account"}
         </button>
       </div>
     </main>

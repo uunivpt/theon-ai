@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { memo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -15,7 +15,7 @@ type ChatBubbleProps = {
   text: string;
 };
 
-export default function ChatBubble({ role, text }: ChatBubbleProps) {
+function ChatBubble({ role, text }: ChatBubbleProps) {
   const isUser = role === "user";
   const [copied, setCopied] = useState(false);
 
@@ -50,3 +50,5 @@ export default function ChatBubble({ role, text }: ChatBubbleProps) {
     </div>
   );
 }
+
+export default memo(ChatBubble);

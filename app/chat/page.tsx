@@ -1,7 +1,5 @@
+import { redirect } from "next/navigation";
+
 export default function ChatPage() {
-  return (
-    <div>
-      Chat Page
-    </div>
-  );
+  redirect("/");
 }

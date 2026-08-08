@@ -56,7 +56,17 @@ export async function POST(req: Request) {
     if (!message && attachments.length === 0) return Response.json({ error: "Message or attachment is required." }, { status: 400 });
     if (message.length > 12000) return Response.json({ error: "Message is too long." }, { status: 400 });
 
-    const validAttachments = attachments.filter((item) => item && typeof item.name === "string" && typeof item.type === "string" && typeof item.dataUrl === "string" && (item.type.startsWith("image/") || item.type === "application/pdf") && item.dataUrl.length <= 8_000_000);
+    const validAttachments = attachments.filter((item) => {
+      const supportedImage = item?.type === "image/jpeg" || item?.type === "image/png" || item?.type === "image/webp" || item?.type === "image/gif";
+      const supportedFile = item?.type === "application/pdf";
+      return item && typeof item.name === "string" && typeof item.type === "string" && typeof item.dataUrl === "string" && (supportedImage || supportedFile) && item.dataUrl.length <= 3_500_000;
+    });
+
+    const unsupportedAttachments = attachments.filter((item) => item && (item.type === "image/heic" || item.type === "image/heif"));
+    if (unsupportedAttachments.length > 0 && validAttachments.length === 0 && !message) {
+      return Response.json({ error: "This camera format is not supported. Please use JPG/PNG or change your camera format to JPEG." }, { status: 415 });
+    }
+
     const safeHistory = history.filter((item) => item && (item.role === "user" || item.role === "ai") && typeof item.text === "string").slice(-30).map((item) => ({ role: item.role === "ai" ? ("assistant" as const) : ("user" as const), content: item.text.slice(0, 12000) }));
 
     const ai = new OpenAI({ apiKey, baseURL: "https://aicredits.in/v1" });

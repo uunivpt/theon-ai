@@ -16,7 +16,9 @@ async function compressImage(file: File): Promise<Attachment> {
 
 async function extractPdfText(file: File): Promise<Attachment> {
   if (file.size > MAX_PDF_SIZE) throw new Error("PDF is too large. Please upload a PDF smaller than 6 MB.");
-  const bytes = new Uint8Array(await file.arrayBuffer()); const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs"); const pdf = await pdfjs.getDocument({ data: bytes, disableWorker: true }).promise; let text = "";
+  const bytes = new Uint8Array(await file.arrayBuffer()); const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.54/pdf.worker.min.mjs";
+  const pdf = await pdfjs.getDocument({ data: bytes }).promise; let text = "";
   for (let pageNumber = 1; pageNumber <= pdf.numPages && text.length < MAX_PDF_TEXT; pageNumber += 1) { const page = await pdf.getPage(pageNumber); const content = await page.getTextContent(); const pageText = content.items.map((item: any) => typeof item?.str === "string" ? item.str : "").join(" ").replace(/\s+/g, " ").trim(); if (pageText) text += `\n\n--- Page ${pageNumber} ---\n${pageText}`; page.cleanup(); }
   text = text.trim().slice(0, MAX_PDF_TEXT); if (!text) throw new Error("This PDF appears to be scanned/image-only. Text could not be extracted yet."); return { name: file.name, type: "application/pdf", dataUrl: "", extractedText: text };
 }

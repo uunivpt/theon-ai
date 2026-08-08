@@ -57,6 +57,15 @@ export async function updateChatPreview(
   });
 }
 
+export async function renameChat(uid: string, chatId: string, title: string) {
+  const cleanTitle = title.replace(/\s+/g, " ").trim().slice(0, 80);
+  if (!cleanTitle) return;
+  await updateDoc(chatDoc(uid, chatId), {
+    title: cleanTitle,
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export async function saveMessage(
   uid: string,
   chatId: string,

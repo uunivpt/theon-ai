@@ -38,51 +38,35 @@ export async function saveMessage(uid: string, chatId: string, role: ChatMessage
   return messageRef.id;
 }
 
-// Do not use Firestore orderBy here: older chat documents may not have updatedAt/createdAt.
-// Reading the collection first keeps legacy history visible and avoids index/missing-field failures.
 export async function loadChats(uid: string): Promise<ChatSummary[]> {
   const snapshot = await getDocs(chatsCollection(uid));
-  return snapshot.docs.map((item) => ({ id: item.id, ...(item.data() as Omit<ChatSummary, "id">) }))
-    .sort((a, b) => millis(b.updatedAt) - millis(a.updatedAt));
+  return snapshot.docs.map((item) => ({ id: item.id, ...(item.data() as Omit<ChatSummary, "id">) })).sort((a, b) => millis(b.updatedAt) - millis(a.updatedAt));
 }
 
 export async function loadMessages(uid: string, chatId: string): Promise<ChatMessage[]> {
   const snapshot = await getDocs(messagesCollection(uid, chatId));
-  return snapshot.docs.map((item) => ({
-    id: item.id,
-    role: item.data().role as ChatMessage["role"],
-    text: String(item.data().text ?? ""),
-    createdAt: item.data().createdAt,
-  })).sort((a, b) => millis(a.createdAt) - millis(b.createdAt));
+  return snapshot.docs.map((item) => ({ id: item.id, role: item.data().role as ChatMessage["role"], text: String(item.data().text ?? ""), createdAt: item.data().createdAt })).sort((a, b) => millis(a.createdAt) - millis(b.createdAt));
 }
 
 export async function migrateLegacyMessages(uid: string) {
   const legacyCollection = collection(db, "users", uid, "messages");
   const legacy = await getDocs(legacyCollection);
   if (legacy.empty) return null;
-
   const existing = await getDocs(chatsCollection(uid));
   if (existing.docs.some((item) => item.data().title === "Previous conversation")) return null;
-
   const chatId = await createChat(uid, "Previous conversation");
-  const batch = writeBatch(db);
-  let lastText = "";
+  const batch = writeBatch(db); let lastText = "";
   const items = [...legacy.docs].sort((a, b) => millis(a.data().createdAt) - millis(b.data().createdAt));
-  for (const item of items) {
-    const data = item.data();
-    const messageRef = doc(messagesCollection(uid, chatId));
-    batch.set(messageRef, { role: data.role === "user" ? "user" : "ai", text: String(data.text ?? ""), createdAt: data.createdAt ?? serverTimestamp() });
-    lastText = String(data.text ?? lastText);
-  }
-  batch.update(chatDoc(uid, chatId), { preview: lastText.slice(0, 160), updatedAt: serverTimestamp() });
-  await batch.commit();
-  return chatId;
+  for (const item of items) { const data = item.data(); const messageRef = doc(messagesCollection(uid, chatId)); batch.set(messageRef, { role: data.role === "user" ? "user" : "ai", text: String(data.text ?? ""), createdAt: data.createdAt ?? serverTimestamp() }); lastText = String(data.text ?? lastText); }
+  batch.update(chatDoc(uid, chatId), { preview: lastText.slice(0, 160), updatedAt: serverTimestamp() }); await batch.commit(); return chatId;
 }
 
 export async function deleteChat(uid: string, chatId: string) {
-  const messages = await getDocs(messagesCollection(uid, chatId));
-  const batch = writeBatch(db);
-  messages.docs.forEach((item) => batch.delete(item.ref));
-  batch.delete(chatDoc(uid, chatId));
-  await batch.commit();
+  const messages = await getDocs(messagesCollection(uid, chatId)); const batch = writeBatch(db);
+  messages.docs.forEach((item) => batch.delete(item.ref)); batch.delete(chatDoc(uid, chatId)); await batch.commit();
+}
+
+export async function deleteAllChats(uid: string) {
+  const chats = await getDocs(chatsCollection(uid));
+  for (const chat of chats.docs) await deleteChat(uid, chat.id);
 }

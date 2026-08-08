@@ -14,41 +14,21 @@ export default function Header() {
   }
 
   return (
-    <header className="h-16 border-b border-white/10 bg-white/5 backdrop-blur-xl flex items-center justify-between px-6">
-
-      <div className="flex items-center gap-4">
-
-        <Image
-          src="/logo.png"
-          alt="Theon AI"
-          width={45}
-          height={45}
-          priority
-        />
-
-        <div>
-          <h2 className="text-white text-xl font-semibold">
-            Welcome to Theon AI 👋
-          </h2>
-
-          <p className="text-gray-400 text-sm">
-            Your Personal AI Assistant
-          </p>
+    <header className="flex h-[72px] items-center justify-between border-b border-white/[0.07] bg-black/20 px-6 backdrop-blur-2xl">
+      <div className="flex items-center gap-3.5">
+        <div className="relative flex h-10 w-10 items-center justify-center">
+          <div className="absolute inset-0 rounded-xl bg-violet-500/[0.10] blur-xl" />
+          <Image src="/logo.png" alt="Theon AI" width={38} height={38} priority className="relative h-9 w-9 object-contain" />
         </div>
-
+        <div className="leading-tight">
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-white/90">Theon AI</h2>
+          <p className="mt-0.5 text-[11px] tracking-wide text-white/35">Personal AI assistant</p>
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
-
-        <button
-          onClick={logout}
-          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl transition"
-        >
-          Logout
-        </button>
-
-      </div>
-
+      <button onClick={logout} className="rounded-xl border border-white/[0.08] bg-white/[0.035] px-4 py-2 text-xs font-medium text-white/60 transition hover:border-white/[0.14] hover:bg-white/[0.07] hover:text-white/90">
+        Log out
+      </button>
     </header>
   );
 }

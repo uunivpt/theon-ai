@@ -18,6 +18,81 @@
     --foreground: #ededed;
   }
 }
+
+html.light {
+  --background: #f7f8fc;
+  --foreground: #171923;
+}
+
+html.light body {
+  background: #f7f8fc;
+  color: #171923;
+}
+
+/* Light appearance for the existing dark-first UI. */
+html.light .tablet-mobile-shell,
+html.light main {
+  background: #f7f8fc !important;
+  color: #171923 !important;
+}
+
+html.light section,
+html.light footer,
+html.light aside,
+html.light header {
+  color: #171923;
+}
+
+html.light [class*="bg-[#"] {
+  background-color: #ffffff !important;
+}
+
+html.light [class*="bg-black"] {
+  background-color: rgba(247, 248, 252, 0.96) !important;
+}
+
+html.light [class*="bg-white/[0.04]"],
+html.light [class*="bg-white/[0.055]"],
+html.light [class*="bg-white/[0.03]"],
+html.light [class*="bg-white/[0.045]"],
+html.light [class*="bg-white/[0.06]"],
+html.light [class*="bg-white/[0.07]"] {
+  background-color: #eef0f6 !important;
+}
+
+html.light [class*="text-white"] {
+  color: #1d2230 !important;
+}
+
+html.light [class*="border-white"] {
+  border-color: rgba(25, 30, 45, 0.12) !important;
+}
+
+html.light input,
+html.light textarea {
+  color: #171923 !important;
+  background-color: #ffffff !important;
+  border-color: rgba(25, 30, 45, 0.14) !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: rgba(30, 35, 50, 0.42) !important;
+}
+
+html.light [class*="bg-gradient-to-br"] {
+  background: linear-gradient(135deg, #f7f8fc, #eef1f8) !important;
+}
+
+html.light [class*="shadow-[20px_0_70px"] {
+  box-shadow: 20px 0 70px rgba(30, 35, 50, 0.12) !important;
+}
+
+html.light [class*="bg-black/70"],
+html.light [class*="bg-black/65"] {
+  background-color: rgba(20, 24, 35, 0.45) !important;
+}
+
 .katex-display {
   display: block;
   overflow-x: auto;

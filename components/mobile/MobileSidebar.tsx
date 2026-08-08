@@ -66,10 +66,10 @@ export default function MobileSidebar({
 
   return (
     <>
-      <div onClick={onClose} className={`fixed inset-0 z-40 bg-black/70 backdrop-blur-[2px] transition-opacity duration-300 ${open ? "visible opacity-100" : "invisible opacity-0"}`} />
-      <aside aria-hidden={!open} className={`fixed left-0 top-0 z-50 flex h-[100dvh] w-[86%] max-w-[340px] flex-col border-r border-white/[0.08] bg-[#080810]/[0.98] shadow-[20px_0_70px_rgba(0,0,0,.35)] backdrop-blur-3xl transition-transform duration-300 ease-out ${open ? "translate-x-0" : "-translate-x-full"}`}>
+      <div onClick={onClose} className={`fixed inset-0 z-40 bg-black/70 backdrop-blur-[2px] transition-opacity duration-100 ${open ? "visible opacity-100" : "invisible opacity-0"}`} />
+      <aside aria-hidden={!open} className={`fixed left-0 top-0 z-50 flex h-[100dvh] w-[86%] max-w-[340px] flex-col border-r border-white/[0.08] bg-[#080810]/[0.98] shadow-[20px_0_70px_rgba(0,0,0,.35)] backdrop-blur-3xl transition-transform duration-100 ease-out ${open ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex items-center justify-end border-b border-white/[0.07] px-4 py-4">
-          <button onClick={onClose} aria-label="Close menu" className="flex h-9 w-9 items-center justify-center rounded-full text-white/45 hover:bg-white/[0.06] hover:text-white/80"><X size={19} /></button>
+          <button onClick={onClose} aria-label="Close menu" className="flex h-9 w-9 items-center justify-center rounded-full text-white/45 transition duration-100 hover:bg-white/[0.06] hover:text-white/80"><X size={19} /></button>
         </div>
 
         <div className="p-4">
@@ -91,7 +91,7 @@ export default function MobileSidebar({
                   onTouchStart={() => startLongPress(chat)}
                   onTouchEnd={cancelLongPress}
                   onTouchMove={cancelLongPress}
-                  className={`group flex w-full min-w-0 items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition ${currentChatId === chat.id ? "border-white/[0.08] bg-white/[0.07]" : "border-transparent hover:bg-white/[0.045]"}`}
+                  className={`group flex w-full min-w-0 items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition duration-100 ${currentChatId === chat.id ? "border-white/[0.08] bg-white/[0.07]" : "border-transparent hover:bg-white/[0.045]"}`}
                 >
                   <MessageSquare size={16} className="shrink-0 text-white/45" />
                   <span className="min-w-0 flex-1">
@@ -105,9 +105,9 @@ export default function MobileSidebar({
         </div>
 
         <div className="space-y-1 border-t border-white/[0.07] p-4">
-          <button onClick={onProfile} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-white/50 hover:bg-white/[0.045] hover:text-white/80"><User size={18} /> Profile</button>
-          <button onClick={onSettings} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-white/50 hover:bg-white/[0.045] hover:text-white/80"><Settings size={18} /> Settings</button>
-          <button onClick={onLogout} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-red-400/70 hover:bg-red-500/[0.08] hover:text-red-300"><LogOut size={18} /> Logout</button>
+          <button onClick={onProfile} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-white/50 transition duration-100 hover:bg-white/[0.045] hover:text-white/80"><User size={18} /> Profile</button>
+          <button onClick={onSettings} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-white/50 transition duration-100 hover:bg-white/[0.045] hover:text-white/80"><Settings size={18} /> Settings</button>
+          <button onClick={onLogout} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-red-400/70 transition duration-100 hover:bg-red-500/[0.08] hover:text-red-300"><LogOut size={18} /> Logout</button>
         </div>
       </aside>
 

@@ -1,34 +1,24 @@
+import Image from "next/image";
+
 export default function TypingIndicator() {
   return (
-    <div className="flex items-end gap-3">
-
-      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center text-white shadow-lg">
-        ✨
+    <div className="flex w-full items-start gap-3" role="status" aria-label="Theon is thinking">
+      <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black">
+        <Image
+          src="/logo.png"
+          alt="Theon AI"
+          width={36}
+          height={36}
+          className="h-8 w-8 object-contain [image-rendering:pixelated]"
+        />
       </div>
-
-      <div className="bg-white/10 border border-white/10 rounded-3xl px-5 py-4">
-
-        <div className="flex gap-2">
-
-          <span
-            className="w-2 h-2 rounded-full bg-white animate-bounce"
-            style={{ animationDelay: "0ms" }}
-          />
-
-          <span
-            className="w-2 h-2 rounded-full bg-white animate-bounce"
-            style={{ animationDelay: "200ms" }}
-          />
-
-          <span
-            className="w-2 h-2 rounded-full bg-white animate-bounce"
-            style={{ animationDelay: "400ms" }}
-          />
-
+      <div className="rounded-[20px] rounded-bl-[7px] border border-white/[0.12] bg-[#0b0b0b] px-4 py-3.5">
+        <div className="flex items-center gap-1.5 px-0.5 py-1">
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/70 [animation-delay:0ms]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/70 [animation-delay:160ms]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/70 [animation-delay:320ms]" />
         </div>
-
       </div>
-
     </div>
   );
 }

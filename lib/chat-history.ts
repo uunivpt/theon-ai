@@ -77,17 +77,25 @@ export async function loadMessages(uid: string, chatId: string): Promise<ChatMes
   }));
 }
 
-export async function ensureChatExists(uid: string, chatId: string, title = "New chat") {
-  const ref = chatDoc(uid, chatId);
-  const existing = await getDoc(ref);
-  if (!existing.exists()) {
-    await setDoc(ref, {
-      title,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      preview: "",
+export async function migrateLegacyMessages(uid: string) {
+  const legacy = await getDocs(
+    query(collection(db, "users", uid, "messages"), orderBy("createdAt", "asc"))
+  );
+  if (legacy.empty) return null;
+
+  const chatId = await createChat(uid, "Previous conversation");
+  for (const item of legacy.docs) {
+    const data = item.data();
+    await addDoc(messagesCollection(uid, chatId), {
+      role: data.role,
+      text: data.text,
+      createdAt: data.createdAt ?? serverTimestamp(),
     });
   }
+
+  const last = legacy.docs[legacy.docs.length - 1]?.data();
+  if (last?.text) await updateChatPreview(uid, chatId, last.text);
+  return chatId;
 }
 
 export async function deleteChat(uid: string, chatId: string) {

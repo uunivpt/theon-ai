@@ -12,27 +12,42 @@ const features: SelectedFeature[] = [
 ];
 
 const icons = [Brain, Sparkles, FileText, GraduationCap];
-
 type Props = { onFeatureSelect?: (feature: SelectedFeature) => void };
 
 export default function MobileWelcome({ onFeatureSelect }: Props) {
   return (
-    <section className="flex h-full min-h-0 flex-1 flex-col items-center overflow-hidden bg-black px-5 pt-4">
-      <div className="flex h-full w-full max-w-[760px] flex-col items-center justify-center text-center py-4 sm:py-6 lg:py-8">
+    <section className="relative flex h-full min-h-0 flex-1 flex-col items-center overflow-hidden bg-black px-5 pt-4">
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(124,58,237,.075),transparent_62%)]" />
+      <div className="relative flex h-full w-full max-w-[820px] flex-col items-center justify-center py-4 text-center sm:py-6 lg:py-8">
         <div className="relative flex shrink-0 items-center justify-center">
-          <div className="absolute h-44 w-44 rounded-full bg-violet-600/[0.07] blur-[65px]" />
-          <Image src="/logo.png" alt="Theon AI" width={180} height={180} priority className="relative z-10 h-[118px] w-[118px] object-contain drop-shadow-[0_0_26px_rgba(139,92,246,.28)] sm:h-[134px] sm:w-[134px] lg:h-[144px] lg:w-[144px]" />
+          <div className="absolute h-48 w-48 rounded-full bg-violet-600/[0.08] blur-[70px]" />
+          <div className="absolute h-32 w-32 rounded-full border border-white/[0.045]" />
+          <Image src="/logo.png" alt="Theon AI" width={180} height={180} priority className="relative z-10 h-[112px] w-[112px] object-contain drop-shadow-[0_0_32px_rgba(139,92,246,.32)] sm:h-[126px] sm:w-[126px] lg:h-[138px] lg:w-[138px]" />
         </div>
-        <div className="mt-3 shrink-0 text-[28px] font-semibold leading-none tracking-[0.18em] text-white sm:text-[31px] lg:text-[33px]">THEON <span className="bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">AI</span></div>
-        <h2 className="mt-5 shrink-0 text-[18px] font-medium tracking-[-0.015em] text-white/90 sm:text-[20px] lg:text-[21px]">What can I help you with?</h2>
-        <p className="mt-1.5 max-w-[430px] shrink-0 text-[11px] leading-5 text-white/35 sm:text-[12px]">Choose a starting point, then add your own context.</p>
-        <div className="mt-5 grid w-full max-w-[620px] shrink-0 grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3 lg:grid-cols-4">
+
+        <div className="mt-4 shrink-0 text-[27px] font-semibold leading-none tracking-[0.19em] text-white sm:text-[30px] lg:text-[32px]">
+          THEON <span className="bg-gradient-to-r from-violet-300 via-purple-200 to-cyan-300 bg-clip-text text-transparent">AI</span>
+        </div>
+        <div className="mt-3 flex shrink-0 items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.025] px-3 py-1.5 shadow-[0_8px_30px_rgba(0,0,0,.25)] backdrop-blur-xl">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80 shadow-[0_0_10px_rgba(52,211,153,.35)]" />
+          <span className="text-[9px] font-medium tracking-[0.12em] text-white/40">READY TO HELP</span>
+        </div>
+
+        <h2 className="mt-5 shrink-0 text-[19px] font-medium tracking-[-0.02em] text-white/95 sm:text-[21px] lg:text-[23px]">What can I help you with?</h2>
+        <p className="mt-1.5 max-w-[470px] shrink-0 text-[11px] leading-5 text-white/35 sm:text-[12px]">Start with an idea, a question, or one of the options below.</p>
+
+        <div className="mt-5 grid w-full max-w-[700px] shrink-0 grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3 lg:grid-cols-4">
           {features.map((feature, index) => {
             const Icon = icons[index];
-            return <button key={feature.id} type="button" onClick={() => onFeatureSelect?.(feature)} className="group min-h-[74px] rounded-[17px] border border-white/[0.1] bg-white/[0.025] px-3 py-2.5 text-left transition duration-150 hover:border-violet-400/30 hover:bg-white/[0.045] active:scale-[0.985]">
-              <Icon size={18} strokeWidth={1.5} className="mb-1.5 text-violet-400/90 transition group-hover:text-violet-300" />
-              <span className="block text-[10px] font-medium leading-[1.25] text-white/75">{feature.label}</span>
-            </button>;
+            return (
+              <button key={feature.id} type="button" onClick={() => onFeatureSelect?.(feature)} className="group relative min-h-[82px] overflow-hidden rounded-[19px] border border-white/[0.09] bg-white/[0.025] px-3.5 py-3 text-left shadow-[0_10px_35px_rgba(0,0,0,.18)] backdrop-blur-xl transition-all duration-150 hover:-translate-y-0.5 hover:border-violet-300/25 hover:bg-white/[0.045] hover:shadow-[0_14px_38px_rgba(0,0,0,.3)] active:translate-y-0 active:scale-[0.985]">
+                <div className="pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full bg-violet-500/[0.06] blur-2xl transition group-hover:bg-violet-400/[0.12]" />
+                <div className="relative flex h-7 w-7 items-center justify-center rounded-lg border border-violet-300/[0.12] bg-violet-400/[0.055] text-violet-300/90">
+                  <Icon size={16} strokeWidth={1.5} />
+                </div>
+                <span className="relative mt-2 block text-[10px] font-medium leading-[1.3] text-white/75 sm:text-[11px]">{feature.label}</span>
+              </button>
+            );
           })}
         </div>
       </div>

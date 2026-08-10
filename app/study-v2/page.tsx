@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import { ArrowLeft, BookOpen, Brain, CheckCircle2, FileText, GraduationCap, ImagePlus, Lightbulb, Loader2, Paperclip, Send, Sparkles, Target, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -32,7 +32,7 @@ async function readPdf(file: File) {
   return text.slice(0, 120000).trim();
 }
 
-export default function PersistentStudyRoom() {
+function PersistentStudyRoomContent() {
   const router = useRouter(); const params = useSearchParams(); const selectedChat = params.get("chat");
   const inputRef = useRef<HTMLInputElement>(null); const bottomRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]); const [chatId, setChatId] = useState<string | null>(selectedChat); const [topic, setTopic] = useState(""); const [input, setInput] = useState(""); const [attachments, setAttachments] = useState<Attachment[]>([]); const [busy, setBusy] = useState(false); const [loading, setLoading] = useState(Boolean(selectedChat)); const [reading, setReading] = useState(false); const [ready, setReady] = useState(false);
@@ -54,3 +54,7 @@ export default function PersistentStudyRoom() {
 }
 
 function Materials({ files, remove, compact = false }: { files: Attachment[]; remove: (i: number) => void; compact?: boolean }) { return <div className={`flex flex-wrap gap-2 ${compact ? "mb-1" : "mt-3"}`}>{files.map((file,i) => <div key={`${file.name}-${i}`} className="flex items-center gap-2 rounded-xl border border-violet-300/10 bg-violet-400/[.05] px-2.5 py-2 text-[10px] text-white/60">{file.type.startsWith("image/") && file.dataUrl ? <Image src={file.dataUrl} alt="Study material" width={30} height={30} unoptimized className="h-7 w-7 rounded-md object-cover"/> : <FileText size={15} className="text-violet-300"/>}<span className="max-w-[180px] truncate">{file.name}</span>{!compact && <button type="button" onClick={() => remove(i)} className="rounded-md p-0.5 text-white/25 hover:bg-white/10 hover:text-white"><X size={13}/></button>}</div>)}</div>; }
+
+export default function PersistentStudyRoom() {
+  return <Suspense fallback={<main className="min-h-[100dvh] bg-[#08070b] text-white flex items-center justify-center text-xs text-white/35"><Loader2 size={17} className="mr-2 animate-spin"/> Opening Study Room…</main>}><PersistentStudyRoomContent /></Suspense>;
+}

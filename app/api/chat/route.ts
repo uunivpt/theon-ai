@@ -10,7 +10,7 @@ const FEATURE_INSTRUCTIONS: Record<string, string> = {
 type IncomingMessage = { role: "user" | "ai"; text: string };
 type Attachment = { name: string; type: string; dataUrl?: string; extractedText?: string };
 type Preferences = { style?: string; explanation?: string; language?: string };
-type SearchResult = { title: string; url: string; domain: string; snippet: string };
+type SearchResult = { title: string; url: string; domain: string; snippet: string; content?: string };
 const MAX_IMAGE_DATA_URL_LENGTH = 3_500_000;
 const MAX_PDF_TEXT = 120_000;
 const AICREDITS_BASE_URL = "https://api.aicredits.in/v1";
@@ -21,19 +21,20 @@ const MAX_RETRIES = 2;
 function preferencesInstruction(p: Preferences) { const style = p.style === "concise" ? "Prefer concise answers." : p.style === "detailed" ? "Give detailed answers when useful." : "Use balanced detail."; const explanation = p.explanation === "simple" ? "Prefer simple explanations." : p.explanation === "deep" ? "Explain deeply with reasoning and context." : "Use normal explanation depth."; const language = p.language === "english" ? "Reply in English." : p.language === "marathi" ? "Reply in Marathi." : p.language === "hindi" ? "Reply in Hindi." : "Match the user's language and writing style."; return `User preferences: ${style} ${explanation} ${language}`; }
 async function fetchWithTimeout(url: string, init: RequestInit, timeout = REQUEST_TIMEOUT_MS) { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeout); try { return await fetch(url, { ...init, signal: controller.signal }); } finally { clearTimeout(timer); } }
 async function withRetry<T>(operation: () => Promise<T>) { let lastError: unknown; for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) { try { return await operation(); } catch (error) { lastError = error; if (attempt < MAX_RETRIES) await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt)); } } throw lastError; }
-function decodeHtml(value: string) { return value.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">"); }
 function domainFromUrl(url: string) { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return "source"; } }
-async function searchWeb(query: string, limit = 6): Promise<SearchResult[]> {
-  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-  const response = await fetchWithTimeout(url, { headers: { "User-Agent": "Theon-AI/1.0" } }, 12000);
-  if (!response.ok) throw new Error(`Search failed: ${response.status}`);
-  const html = await response.text(); const results: SearchResult[] = []; const pattern = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g; let match: RegExpExecArray | null;
-  while ((match = pattern.exec(html)) && results.length < limit) { const rawUrl = decodeHtml(match[1]); const title = decodeHtml(match[2].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim()); const snippet = decodeHtml(match[3].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim()); let finalUrl = rawUrl; try { const parsed = new URL(rawUrl); const uddg = parsed.searchParams.get("uddg"); if (uddg) finalUrl = decodeURIComponent(uddg); } catch {} if (finalUrl.startsWith("http") && title) results.push({ title, url: finalUrl, domain: domainFromUrl(finalUrl), snippet }); }
-  return results;
+
+async function searchWeb(query: string, limit = 6, deep = false): Promise<SearchResult[]> {
+  const tavilyKey = process.env.TAVILY_API_KEY;
+  if (!tavilyKey) throw new Error("Tavily search is not configured.");
+  const response = await fetchWithTimeout("https://api.tavily.com/search", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${tavilyKey}` }, body: JSON.stringify({ query, search_depth: deep ? "advanced" : "basic", topic: "general", max_results: limit, include_answer: false, include_raw_content: true, include_images: false }) }, 20_000);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(`Tavily search failed: ${response.status}`);
+  const results = Array.isArray(payload?.results) ? payload.results : [];
+  return results.map((item: any) => ({ title: typeof item?.title === "string" ? item.title : "Untitled source", url: typeof item?.url === "string" ? item.url : "", domain: domainFromUrl(item?.url || ""), snippet: typeof item?.content === "string" ? item.content.slice(0, 2500) : "", content: typeof item?.raw_content === "string" ? item.raw_content.slice(0, 9000) : undefined })).filter((item: SearchResult) => item.url);
 }
 function uniqueResults(items: SearchResult[]) { const seen = new Set<string>(); return items.filter((item) => { if (seen.has(item.url)) return false; seen.add(item.url); return true; }); }
 function extractResponseText(payload: any) { if (typeof payload?.output_text === "string") return payload.output_text.trim(); const output = Array.isArray(payload?.output) ? payload.output : []; return output.flatMap((item: any) => Array.isArray(item?.content) ? item.content : []).filter((item: any) => item?.type === "output_text" && typeof item?.text === "string").map((item: any) => item.text).join("\n").trim(); }
-function sourceInstruction(results: SearchResult[], deep: boolean) { const packed = results.map((item, index) => `[${index + 1}] ${item.title}\nURL: ${item.url}\nSource: ${item.domain}\nSnippet: ${item.snippet}`).join("\n\n"); return `${deep ? "You are doing deep research." : "You are doing a web search."} Use the provided sources as evidence. Do not invent facts or citations. When a factual claim comes from a source, add an inline citation like [1] or [2]. At the end, add a compact Sources section listing only the source numbers and domains. Prefer primary/official sources when available.\n\nSEARCH RESULTS:\n${packed}`; }
+function sourceInstruction(results: SearchResult[], deep: boolean) { const packed = results.map((item, index) => `[${index + 1}] ${item.title}\nURL: ${item.url}\nSource: ${item.domain}\nContent: ${(item.content || item.snippet).slice(0, 9000)}`).join("\n\n"); return `${deep ? "You are doing deep research." : "You are doing a live web search."} Use the provided web sources as evidence. Current or time-sensitive claims must be grounded in the supplied sources. Do not invent facts or citations. When a factual claim comes from a source, add an inline citation like [1] or [2]. If sources disagree, say so and explain the difference. At the end, add a compact Sources section listing the source numbers, publisher/domain, and URL. Prefer primary/official sources when available.\n\nWEB SOURCES:\n${packed}`; }
 
 export async function POST(req: Request) {
   try {
@@ -45,8 +46,8 @@ export async function POST(req: Request) {
     const preferenceInstruction = preferencesInstruction(preferences); const featureInstruction = FEATURE_INSTRUCTIONS[featureId] || "";
     let webResults: SearchResult[] = [];
     if (mode === "web" || mode === "research") {
-      const queries = mode === "research" ? [message, `${message} latest research`, `${message} official sources`] : [message];
-      const resultSets = await Promise.all(queries.map((query) => searchWeb(query, mode === "research" ? 5 : 8).catch(() => []))); webResults = uniqueResults(resultSets.flat()).slice(0, mode === "research" ? 12 : 8);
+      const queries = mode === "research" ? [message, `${message} latest developments`, `${message} official sources`] : [message];
+      const resultSets = await Promise.all(queries.map((query) => searchWeb(query, mode === "research" ? 5 : 8, mode === "research").catch(() => []))); webResults = uniqueResults(resultSets.flat()).slice(0, mode === "research" ? 12 : 8);
       if (!webResults.length) return Response.json({ error: "I couldn't reach web search right now. Please try again." }, { status: 502 });
     }
     const pdfs = validAttachments.filter((file) => file.type === "application/pdf");

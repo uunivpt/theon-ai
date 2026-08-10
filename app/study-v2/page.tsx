@@ -15,11 +15,13 @@ type Message = { role: "user" | "ai"; text: string; attachments?: Attachment[] }
 
 function cleanAnswer(text: string) {
   return text
-    .replace(/(^|\n)\s*#{0,4}\s*(?:sources?|references?|citations?)\s*:?[\s\S]*$/im, "")
-    .replace(/(^|\n)\s*(?:sources?|references?|citations?)\s*:\s*[\s\S]*$/im, "")
+    .replace(/(^|\n)\s*(?:#{1,6}\s*)?(?:\*{1,3}|_{1,3})?\s*(?:sources?|references?|citations?)\s*(?:\*{1,3}|_{1,3})?\s*:?[ \t]*[\s\S]*$/im, "")
+    .replace(/(^|\n)\s*(?:[-*•]\s*)?(?:\*{1,3}|_{1,3})?\s*(?:sources?|references?|citations?)\s*(?:\*{1,3}|_{1,3})?\s*:\s*[\s\S]*$/im, "")
     .replace(/\[(?:\d+\s*(?:[,;]\s*\d+)*|\d+\s*[-–]\s*\d+)(?:\s*[,;]\s*\d+)*\]/g, "")
     .replace(/\s*\((?:source|sources|citation|citations|reference|references)\s*:?\s*\d+(?:\s*[,;]\s*\d+)*\)\.?/gi, "")
-    .replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 function Answer({ text }: { text: string }) { return <div className="theon-markdown prose prose-invert max-w-none break-words text-[15px] leading-[1.8] prose-headings:font-semibold prose-headings:tracking-[-.02em] prose-h1:text-xl prose-h2:mt-7 prose-h2:mb-3 prose-h3:mt-5 prose-h3:mb-2 prose-p:my-3.5 prose-li:my-2 prose-li:leading-7 prose-strong:text-white prose-a:text-violet-300"><ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanAnswer(text)}</ReactMarkdown></div>; }
 

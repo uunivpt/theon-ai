@@ -1,0 +1,129 @@
+name: Fix Study Room rendering
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-study-rendering.yml'
+      - 'app/study/page.tsx'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-study-rendering:
+    if: ${{ !contains(github.event.head_commit.message, 'Apply Study Room rendering patch') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch Study Room renderer
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('app/study/page.tsx')
+          s = p.read_text()
+
+          old = '''function normalizeMath(text: string) {
+  const lines = text.split("\\n");
+  return lines.map((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("$") || trimmed.startsWith("`") || trimmed.startsWith(">")) return line;
+    const bullet = /^([-*+]\\s+)/.exec(trimmed)?.[1] || "";
+    const expression = bullet ? trimmed.slice(bullet.length).trim() : trimmed;
+    const looksLikeEquation = expression.length <= 140 && /(?:=|≈|≠|≤|≥|∝|→|↔)/.test(expression) && /[A-Za-z0-9]/.test(expression) && !/[.!?]$/.test(expression);
+    if (!looksLikeEquation || expression.includes("http://") || expression.includes("https://")) return line;
+    return `${bullet}$$${expression}$$`;
+  }).join("\\n");
+}
+
+function Answer({ text }: { text: string }) {
+  const markdown = normalizeMath(cleanAnswer(text));
+  return <div className="theon-markdown prose prose-invert max-w-none break-words text-[15px] leading-[1.85] prose-headings:font-semibold prose-headings:tracking-[-.02em] prose-h1:text-xl prose-h2:mt-7 prose-h2:mb-3 prose-h3:mt-5 prose-h3:mb-2 prose-p:my-3.5 prose-li:my-2 prose-li:leading-7 prose-table:my-5 prose-table:w-full prose-th:border prose-th:border-white/10 prose-th:bg-violet-400/[.06] prose-th:px-3 prose-th:py-2 prose-td:border prose-td:border-white/[.07] prose-td:px-3 prose-td:py-2 prose-strong:text-white prose-a:text-violet-300 prose-katex:text-white"><ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{markdown}</ReactMarkdown></div>;
+}
+'''
+
+          new = '''function normalizeMath(text: string) {
+  let normalized = text
+    .replace(/\\\\\\(([^\\n]+?)\\\\\\)/g, "$$$1$$")
+    .replace(/\\\\\\[([\\s\\S]*?)\\\\\\]/g, "$$$$1$$$$")
+    .replace(/(^|\\n)\\s*`([^`\\n]*?(?:=|≈|≠|≤|≥|∝|→|↔)[^`\\n]*)`/g, "$1$$$2$$");
+  const lines = normalized.split("\\n");
+  return lines.map((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("$") || trimmed.startsWith("`") || trimmed.startsWith(">") || trimmed.startsWith("|") || /^[-*+]\\s+/.test(trimmed) && trimmed.includes("|")) return line;
+    const bullet = /^([-*+]\\s+)/.exec(trimmed)?.[1] || "";
+    const expression = bullet ? trimmed.slice(bullet.length).trim() : trimmed;
+    const looksLikeEquation = expression.length <= 180 && /(?:=|≈|≠|≤|≥|∝|→|↔)/.test(expression) && /[A-Za-z0-9]/.test(expression);
+    const hasMathSyntax = /(?:\\\\frac|\\\\sqrt|\\\\times|\\\\cdot|\\\\sum|\\\\int|_[A-Za-z0-9]|\\^[A-Za-z0-9]|\\\\[A-Za-z]+\\b)/.test(expression);
+    if ((!looksLikeEquation && !hasMathSyntax) || expression.includes("http://") || expression.includes("https://") || /[.!?]$/.test(expression) && !hasMathSyntax) return line;
+    return `${bullet}$$${expression.replace(/\\\\/g, "\\\\")}$$`;
+  }).join("\\n");
+}
+
+function parseChartBlocks(text: string) {
+  const charts: Array<{ id: string; spec: any }> = [];
+  const markdown = text.replace(/```chart\\s*\\n([\\s\\S]*?)\\n```/gi, (_, raw) => {
+    try {
+      const spec = JSON.parse(raw.trim());
+      if (spec && ["bar", "line", "pie"].includes(spec.chartType) && Array.isArray(spec.data) && Array.isArray(spec.series)) {
+        const id = `__THEON_CHART_${charts.length}__`;
+        charts.push({ id, spec });
+        return `\\n\\n${id}\\n\\n`;
+      }
+    } catch {}
+    return _;
+  });
+  return { markdown, charts };
+}
+
+function StudyChart({ spec }: { spec: any }) {
+  const data = Array.isArray(spec.data) ? spec.data : [];
+  const series = Array.isArray(spec.series) ? spec.series.slice(0, 3) : [];
+  const xKey = spec.xKey;
+  const width = 720, height = 300, pad = { l: 48, r: 24, t: 44, b: 54 };
+  const innerW = width - pad.l - pad.r, innerH = height - pad.t - pad.b;
+  const values = data.flatMap((d: any) => series.map((s: any) => Number(d[s.dataKey]))).filter(Number.isFinite);
+  const max = Math.max(1, ...values);
+  const min = Math.min(0, ...values);
+  const range = max - min || 1;
+  const y = (v: number) => pad.t + (max - v) / range * innerH;
+  const x = (i: number) => pad.l + (data.length <= 1 ? innerW / 2 : i * innerW / (data.length - 1));
+  const isLine = spec.chartType === 'line';
+  return <div className="my-5 overflow-hidden rounded-2xl border border-violet-300/15 bg-gradient-to-br from-violet-400/[.08] to-white/[.02] p-4 shadow-[0_18px_55px_rgba(0,0,0,.22)]">
+    <div className="mb-3"><div className="text-sm font-semibold text-white/90">{spec.meta?.title || 'Study chart'}</div>{spec.meta?.description && <div className="mt-1 text-[11px] text-white/35">{spec.meta.description}</div>}</div>
+    <div className="overflow-x-auto"><svg viewBox={`0 0 ${width} ${height}`} className="min-w-[560px] w-full" role="img" aria-label={spec.meta?.title || 'Study chart'}>
+      {[0,.25,.5,.75,1].map((r) => <line key={r} x1={pad.l} x2={width-pad.r} y1={pad.t+r*innerH} y2={pad.t+r*innerH} stroke="rgba(255,255,255,.08)" />)}
+      {series.map((s: any, si: number) => isLine ? <polyline key={s.dataKey} fill="none" stroke="rgba(167,139,250,.95)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={data.map((d:any,i:number)=>`${x(i)},${y(Number(d[s.dataKey])||0)}`).join(' ')} /> : data.map((d:any,i:number) => { const groupW = innerW / Math.max(1,data.length); const barW = Math.max(8, groupW/(series.length+1)); const bx = pad.l + i*groupW + si*barW + 4; const by=y(Number(d[s.dataKey])||0); const bh=Math.max(2,pad.t+innerH-by); return <rect key={`${s.dataKey}-${i}`} x={bx} y={by} width={barW-3} height={bh} rx="5" fill="rgba(167,139,250,.8)"/>; }))}
+      {data.map((d:any,i:number)=><text key={`x-${i}`} x={x(i)} y={height-20} textAnchor="middle" fill="rgba(255,255,255,.42)" fontSize="10">{String(d[xKey] ?? '')}</text>)}
+    </svg></div>
+  </div>;
+}
+
+function Answer({ text }: { text: string }) {
+  const parsed = parseChartBlocks(cleanAnswer(text));
+  const parts = parsed.markdown.split(/(__THEON_CHART_\\d+__)/g);
+  return <div className="theon-markdown prose prose-invert max-w-none break-words text-[15px] leading-[1.85] prose-headings:font-semibold prose-headings:tracking-[-.02em] prose-h1:text-xl prose-h2:mt-7 prose-h2:mb-3 prose-h3:mt-5 prose-h3:mb-2 prose-p:my-3.5 prose-li:my-2 prose-li:leading-7 prose-table:my-5 prose-table:w-full prose-table:overflow-hidden prose-th:border prose-th:border-violet-300/15 prose-th:bg-violet-400/[.09] prose-th:px-4 prose-th:py-3 prose-th:font-semibold prose-td:border prose-td:border-white/[.08] prose-td:bg-white/[.015] prose-td:px-4 prose-td:py-3 prose-td:align-top prose-strong:text-white prose-a:text-violet-300 prose-katex:text-white">
+    {parts.map((part, i) => { const match = part.match(/^__THEON_CHART_(\\d+)__$/); if (match) return <StudyChart key={part} spec={parsed.charts[Number(match[1])].spec}/>; return <ReactMarkdown key={i} remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{normalizeMath(part)}</ReactMarkdown>; })}
+  </div>;
+}
+'''
+          if old not in s:
+            raise SystemExit('expected renderer block not found')
+          s = s.replace(old, new, 1)
+
+          old_body = '''body: JSON.stringify({ message: `${context}${cleanText || "Study the attached material and teach me the key concepts."}`, history: messages.slice(-20), mode: "study", featureId: "study", attachments: sent, preferences: { style: "detailed", explanation: "simple", language: "auto" } })'''
+          new_body = '''body: JSON.stringify({ message: `${context}${cleanText || "Study the attached material and teach me the key concepts."}\\n\\nPRESENTATION RULES: If the user asks for a table, comparison, sheet, schedule, or structured data, output a real Markdown table with a header row and aligned columns, not a list of values. If the user asks for a chart/graph/visualisation and the available information is numeric or categorical, output a fenced JSON block using exactly this shape: \\`\\`\\`chart\\n{\\"chartType\\":\\"bar\\",\\"meta\\":{\\"title\\":\\"...\\",\\"description\\":\\"...\\"},\\"xKey\\":\\"category\\",\\"series\\":[{\\"dataKey\\":\\"value\\",\\"label\\":\\"Value\\"}],\\"data\\":[{\\"category\\":\\"A\\",\\"value\\":10}]}\\n\\`\\`\\`. Use line charts for trends and bar charts for comparisons. Never fake data; use only data from the user/materials or clearly labelled illustrative values. For equations, always use LaTeX delimiters \\$...\\$ for inline math and \\$\\$...\\$\\$ for display math. Do not write raw LaTeX commands as plain prose.`, history: messages.slice(-20), mode: "study", featureId: "study", attachments: sent, preferences: { style: "detailed", explanation: "simple", language: "auto" } })'''
+          if old_body not in s:
+            raise SystemExit('expected request body not found')
+          s = s.replace(old_body, new_body, 1)
+          p.write_text(s)
+      - name: Commit patch
+        run: |
+          git config user.name "Theon AI Bot"
+          git config user.email "theon-ai-bot@users.noreply.github.com"
+          git add app/study/page.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "Apply Study Room rendering patch"
+          git push

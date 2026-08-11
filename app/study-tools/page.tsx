@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { BookOpen, Brain, CheckCircle2, Clock3, FileText, Flame, GraduationCap, Lightbulb, ListChecks, RefreshCw, Sparkles, Target, Trophy } from "lucide-react";
+import { BookOpen, Brain, CheckCircle2, Clock3, FileText, Flame, GraduationCap, Lightbulb, ListChecks, RefreshCw, Sparkles, Trophy } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -22,10 +22,15 @@ const TOOLS: Tool[] = [
 ];
 
 function clean(text: string) {
-  return text
-    .replace(/(^|\\n)\\s*(?:#{1,6}\\s*)?(?:\\*{1,3}|_{1,3})?\\s*(?:sources?|references?|citations?)\\s*(?:\\*{1,3}|_{1,3})?\\s*:?[ \\t]*[\\s\\S]*$/im, "")
-    .replace(/\\[(?:\\d+\\s*(?:[,;]\\s*\\d+)*|\\d+\\s*[-–]\\s*\\d+)(?:\\s*[,;]\\s*\\d+)*\\]/g, "")
-    .replace(/\\n{3,}/g, "\\n\\n")
+  const lines = text.split(/\r?\n/);
+  const output: string[] = [];
+  for (const line of lines) {
+    if (/^\s*(?:#{1,6}\s*)?(?:sources?|references?|citations?)\s*:?[ \t]*$/i.test(line)) break;
+    output.push(line);
+  }
+  return output.join("\n")
+    .replace(/\[\d+(?:\s*[,;]\s*\d+)*\]/g, "")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
@@ -46,7 +51,7 @@ export default function StudyLab() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: `${tool.prompt}\\n\\nTopic: ${value}`,
+          message: `${tool.prompt}\n\nTopic: ${value}`,
           history: [],
           mode: "study",
           featureId: "study-lab",
@@ -99,7 +104,7 @@ export default function StudyLab() {
 
         <section className="mt-6 rounded-[28px] border border-white/10 bg-black/20 p-5 backdrop-blur-xl sm:p-7">
           <div className="mb-5 flex items-center justify-between gap-3 border-b border-white/[.07] pb-4"><div><p className="text-xs uppercase tracking-[.18em] text-white/30">Learning output</p><h2 className="mt-1 text-lg font-semibold">{active || "Your study session"}</h2></div>{busy && <span className="inline-flex items-center gap-2 text-xs text-white/40"><span className="h-2 w-2 animate-pulse rounded-full bg-violet-400" />Thinking</span>}</div>
-          {answer ? <div className="max-w-none break-words text-[15px] leading-7 text-white/85 [&_h1]:mb-3 [&_h1]:mt-6 [&_h1]:text-xl [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-5 [&_h3]:font-semibold [&_p]:my-3 [&_li]:my-1.5 [&_table]:my-5 [&_table]:w-full [&_table]:overflow-hidden [&_th]:border [&_th]:border-white/10 [&_th]:bg-violet-400/[.08] [&_th]:px-3 [&_th]:py-2 [&_td]:border [&_td]:border-white/[.08] [&_td]:px-3 [&_td]:py-2"><ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{answer}</ReactMarkdown></div> : <div className="grid min-h-44 place-items-center rounded-2xl border border-dashed border-white/[.08] text-center text-sm text-white/30"><div><ListChecks size={25} className="mx-auto mb-3 text-white/20" /><p>Pick a learning mode above.</p><p className="mt-1 text-xs text-white/20">Theon will build the session around your topic.</p></div></div>}
+          {answer ? <div className="max-w-none break-words text-[15px] leading-7 text-white/85 [&_h1]:mb-3 [&_h1]:mt-6 [&_h1]:text-xl [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-5 [&_h3]:font-semibold [&_p]:my-3 [&_li]:my-1.5 [&_table]:my-5 [&_table]:w-full [&_th]:border [&_th]:border-white/10 [&_th]:bg-violet-400/[.08] [&_th]:px-3 [&_th]:py-2 [&_td]:border [&_td]:border-white/[.08] [&_td]:px-3 [&_td]:py-2"><ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{answer}</ReactMarkdown></div> : <div className="grid min-h-44 place-items-center rounded-2xl border border-dashed border-white/[.08] text-center text-sm text-white/30"><div><ListChecks size={25} className="mx-auto mb-3 text-white/20" /><p>Pick a learning mode above.</p><p className="mt-1 text-xs text-white/20">Theon will build the session around your topic.</p></div></div>}
         </section>
 
         <div className="mt-5 flex items-center justify-center gap-2 text-[11px] text-white/20"><Flame size={13} /> Learn • Practice • Revise • Master</div>

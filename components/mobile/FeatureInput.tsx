@@ -7,15 +7,15 @@ import { THEON_MODES, type TheonMode } from "@/lib/theon-modes";
 export type SelectedFeature = { id: string; label: string; hint: string };
 export type Attachment = { name: string; type: string; dataUrl: string; extractedText?: string };
 type Props = { feature: SelectedFeature | null; value: string; onChange: (value: string) => void; onSend: (attachments: Attachment[]) => void; onClearFeature: () => void; mode: TheonMode; onModeChange: (mode: TheonMode) => void; disabled?: boolean };
-const MAX_IMAGE_DATA_URL_LENGTH = 3_000_000;
-const MAX_IMAGE_DIMENSION = 1600;
+const MAX_IMAGE_DATA_URL_LENGTH = 1_100_000;
+const MAX_IMAGE_DIMENSION = 1400;
 const MAX_PDF_SIZE = 6 * 1024 * 1024;
 const MAX_PDF_TEXT = 120_000;
 
 async function compressImage(file: File): Promise<Attachment> {
   if (file.type === "image/heic" || file.type === "image/heif") throw new Error("This camera format isn't supported. Please use JPG or PNG.");
   const sourceUrl = URL.createObjectURL(file);
-  try { const image = new Image(); image.decoding = "async"; image.src = sourceUrl; await image.decode(); const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(image.naturalWidth, image.naturalHeight)); const canvas = document.createElement("canvas"); canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale)); const context = canvas.getContext("2d"); if (!context) throw new Error("Image processing is unavailable on this device"); context.drawImage(image, 0, 0, canvas.width, canvas.height); let quality = 0.82; let dataUrl = canvas.toDataURL("image/jpeg", quality); while (dataUrl.length > MAX_IMAGE_DATA_URL_LENGTH && quality > 0.5) { quality -= 0.08; dataUrl = canvas.toDataURL("image/jpeg", quality); } return { name: file.name, type: "image/jpeg", dataUrl }; }
+  try { const image = new Image(); image.decoding = "async"; image.src = sourceUrl; await image.decode(); const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(image.naturalWidth, image.naturalHeight)); const canvas = document.createElement("canvas"); canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale)); const context = canvas.getContext("2d"); if (!context) throw new Error("Image processing is unavailable on this device"); context.drawImage(image, 0, 0, canvas.width, canvas.height); let quality = 0.82; let dataUrl = canvas.toDataURL("image/jpeg", quality); while (dataUrl.length > MAX_IMAGE_DATA_URL_LENGTH && quality > 0.46) { quality -= 0.08; dataUrl = canvas.toDataURL("image/jpeg", quality); } return { name: file.name, type: "image/jpeg", dataUrl }; }
   finally { URL.revokeObjectURL(sourceUrl); }
 }
 async function extractPdfText(file: File): Promise<Attachment> {

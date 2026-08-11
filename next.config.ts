@@ -11,8 +11,6 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  // Keep production deploys resilient while the legacy Study Room PDF typings are migrated.
-  typescript: { ignoreBuildErrors: true },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },

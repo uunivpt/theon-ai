@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { createChat, getChatSummary, loadMessages, saveMessage, updateStudyChat, type ChatMessage } from "@/lib/chat-history";
@@ -36,8 +38,22 @@ function cleanAnswer(text: string) {
   return text.replace(/(^|\n)\s*(?:#{1,6}\s*)?(?:\*{1,3}|_{1,3})?\s*(?:sources?|references?|citations?)\s*(?:\*{1,3}|_{1,3})?\s*:?[ \t]*[\s\S]*$/im, "").replace(/\[(?:\d+\s*(?:[,;]\s*\d+)*|\d+\s*[-–]\s*\d+)(?:\s*[,;]\s*\d+)*\]/g, "").replace(/\s*\((?:source|sources|citation|citations|reference|references)\s*:?\s*\d+(?:\s*[,;]\s*\d+)*\)\.?/gi, "").replace(/\n{3,}/g, "\n\n").trim();
 }
 
+function normalizeMath(text: string) {
+  const lines = text.split("\n");
+  return lines.map((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("$") || trimmed.startsWith("`") || trimmed.startsWith(">")) return line;
+    const bullet = /^([-*+]\s+)/.exec(trimmed)?.[1] || "";
+    const expression = bullet ? trimmed.slice(bullet.length).trim() : trimmed;
+    const looksLikeEquation = expression.length <= 140 && /(?:=|≈|≠|≤|≥|∝|→|↔)/.test(expression) && /[A-Za-z0-9]/.test(expression) && !/[.!?]$/.test(expression);
+    if (!looksLikeEquation || expression.includes("http://") || expression.includes("https://")) return line;
+    return `${bullet}$$${expression}$$`;
+  }).join("\n");
+}
+
 function Answer({ text }: { text: string }) {
-  return <div className="theon-markdown prose prose-invert max-w-none break-words text-[15px] leading-[1.85] prose-headings:font-semibold prose-headings:tracking-[-.02em] prose-h1:text-xl prose-h2:mt-7 prose-h2:mb-3 prose-h3:mt-5 prose-h3:mb-2 prose-p:my-3.5 prose-li:my-2 prose-li:leading-7 prose-table:my-5 prose-table:w-full prose-th:border prose-th:border-white/10 prose-th:bg-violet-400/[.06] prose-th:px-3 prose-th:py-2 prose-td:border prose-td:border-white/[.07] prose-td:px-3 prose-td:py-2 prose-strong:text-white prose-a:text-violet-300"><ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanAnswer(text)}</ReactMarkdown></div>;
+  const markdown = normalizeMath(cleanAnswer(text));
+  return <div className="theon-markdown prose prose-invert max-w-none break-words text-[15px] leading-[1.85] prose-headings:font-semibold prose-headings:tracking-[-.02em] prose-h1:text-xl prose-h2:mt-7 prose-h2:mb-3 prose-h3:mt-5 prose-h3:mb-2 prose-p:my-3.5 prose-li:my-2 prose-li:leading-7 prose-table:my-5 prose-table:w-full prose-th:border prose-th:border-white/10 prose-th:bg-violet-400/[.06] prose-th:px-3 prose-th:py-2 prose-td:border prose-td:border-white/[.07] prose-td:px-3 prose-td:py-2 prose-strong:text-white prose-a:text-violet-300 prose-katex:text-white"><ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{markdown}</ReactMarkdown></div>;
 }
 
 async function readPdf(file: File) {

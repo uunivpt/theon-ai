@@ -15,6 +15,12 @@ function rateLimitKey(request: NextRequest) {
   return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
 }
 
+function isAllowedOrigin(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  if (!origin) return true;
+  return origin === request.nextUrl.origin || ALLOWED_ORIGINS.has(origin);
+}
+
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
@@ -25,8 +31,7 @@ export function proxy(request: NextRequest) {
   }
 
   if (pathname.startsWith("/api/")) {
-    const origin = request.headers.get("origin");
-    if (origin && !ALLOWED_ORIGINS.has(origin)) {
+    if (!isAllowedOrigin(request)) {
       return NextResponse.json({ error: "Request origin is not allowed." }, { status: 403 });
     }
 
@@ -36,7 +41,7 @@ export function proxy(request: NextRequest) {
     }
 
     const contentLength = Number(request.headers.get("content-length") || "0");
-    const maxBody = pathname === "/api/chat" ? 16 * 1024 * 1024 : 256 * 1024;
+    const maxBody = pathname === "/api/chat" ? 5 * 1024 * 1024 : 256 * 1024;
     if (contentLength > maxBody) {
       return NextResponse.json({ error: "Request is too large." }, { status: 413 });
     }

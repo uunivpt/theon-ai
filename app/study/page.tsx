@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
-import { ArrowLeft, BookOpen, ChevronRight, FileImage, FileText, GraduationCap, ImagePlus, Lightbulb, Loader2, Paperclip, Send, Sparkles, Target, X } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronRight, FileText, GraduationCap, ImagePlus, Lightbulb, Loader2, Paperclip, Send, Sparkles, Target, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
@@ -15,6 +15,7 @@ const quickPrompts = [
   ["Quiz me", "Quiz me on this topic one question at a time and explain my mistakes."],
   ["Make it simple", "Explain this like I'm learning it for the first time, with a simple example."],
 ] as const;
+const MAX_IMAGE_DATA_URL_LENGTH = 1_100_000;
 
 function cleanAnswer(text: string) {
   return text.replace(/\n{0,2}(?:#{1,4}\s*)?Sources\s*:\s*[\s\S]*$/i, "").replace(/\[(?:\d+\s*(?:,\s*\d+)*|\d+\s*[-–]\s*\d+)\]/g, "").replace(/\n{3,}/g, "\n\n").trim();
@@ -24,7 +25,7 @@ function Answer({ text }: { text: string }) { return <div className="prose prose
 async function readPdf(file: File) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const pdf = await pdfjs.getDocument({ data: bytes, disableWorker: true }).promise;
+  const pdf = await pdfjs.getDocument({ data: bytes }).promise;
   let text = "";
   const pageLimit = Math.min(pdf.numPages, 40);
   for (let pageNumber = 1; pageNumber <= pageLimit; pageNumber++) {
@@ -32,6 +33,7 @@ async function readPdf(file: File) {
     const content = await page.getTextContent();
     text += `\n\n--- Page ${pageNumber} ---\n` + content.items.map((item: any) => typeof item?.str === "string" ? item.str : "").join(" ");
     if (text.length > 120000) break;
+    page.cleanup();
   }
   return text.slice(0, 120000).trim();
 }
@@ -48,7 +50,7 @@ export default function StudyRoom() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { try { const saved = sessionStorage.getItem("theon-study-room-messages"); const savedTopic = sessionStorage.getItem("theon-study-topic"); if (saved) setMessages(JSON.parse(saved)); if (savedTopic) setTopic(savedTopic); } catch {} }, []);
-  useEffect(() => { try { sessionStorage.setItem("theon-study-room-messages", JSON.stringify(messages)); } catch {} bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isTyping]);
+  useEffect(() => { try { const safeMessages = messages.map((message) => ({ ...message, attachments: message.attachments?.map(({ name, type }) => ({ name, type })) })); sessionStorage.setItem("theon-study-room-messages", JSON.stringify(safeMessages)); } catch {} bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isTyping]);
 
   async function addFiles(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || []).slice(0, 4);
@@ -58,12 +60,13 @@ export default function StudyRoom() {
       const next: StudyAttachment[] = [];
       for (const file of files) {
         if (file.type === "application/pdf") {
+          if (file.size > 6 * 1024 * 1024) throw new Error(`${file.name} is too large. Please choose a PDF smaller than 6 MB.`);
           const extractedText = await readPdf(file);
           if (!extractedText) throw new Error(`I couldn't read text from ${file.name}.`);
           next.push({ name: file.name, type: file.type, extractedText });
         } else if (["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
           const dataUrl = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error("Image could not be read.")); reader.readAsDataURL(file); });
-          if (dataUrl.length > 3500000) throw new Error(`${file.name} is too large. Please choose a smaller image.`);
+          if (dataUrl.length > MAX_IMAGE_DATA_URL_LENGTH) throw new Error(`${file.name} is too large. Please choose a smaller image.`);
           next.push({ name: file.name, type: file.type, dataUrl });
         }
       }
@@ -96,7 +99,7 @@ export default function StudyRoom() {
     <div className="pointer-events-none fixed left-1/2 top-[-240px] h-[520px] w-[760px] -translate-x-1/2 rounded-full bg-violet-600/[.11] blur-[140px]"/>
     <div className="relative mx-auto flex h-[100dvh] w-full max-w-6xl flex-col px-4 sm:px-6">
       <header className="flex h-[72px] shrink-0 items-center justify-between border-b border-white/[.07]">
-        <button onClick={() => router.push("/")} className="flex items-center gap-2 rounded-xl px-2 py-2 text-xs text-white/45 hover:bg-white/[.04] hover:text-white"><ArrowLeft size={15}/> Back to Theon</button>
+        <button type="button" onClick={() => router.push("/")} className="flex items-center gap-2 rounded-xl px-2 py-2 text-xs text-white/45 hover:bg-white/[.04] hover:text-white"><ArrowLeft size={15}/> Back to Theon</button>
         <div className="flex items-center gap-2.5"><div className="flex h-9 w-9 items-center justify-center rounded-xl border border-violet-300/15 bg-violet-400/[.07] text-violet-300"><GraduationCap size={19}/></div><div><p className="text-sm font-semibold">Study Room</p><p className="text-[10px] text-white/30">Learn • understand • remember</p></div></div>
         <div className="hidden items-center gap-2 rounded-full border border-white/[.07] bg-white/[.025] px-3 py-1.5 text-[10px] text-white/35 sm:flex"><Target size={12}/> Focus mode</div>
       </header>
@@ -108,9 +111,9 @@ export default function StudyRoom() {
             <div className="rounded-3xl border border-violet-300/10 bg-gradient-to-br from-violet-400/[.09] to-white/[.025] p-5 shadow-[0_20px_70px_rgba(0,0,0,.25)]"><div className="flex items-center gap-2 text-xs font-medium text-white/80"><Sparkles size={15} className="text-violet-300"/> Study workspace</div><div className="mt-4 space-y-3 text-[11px] text-white/35"><div className="flex items-center gap-2"><FileText size={13}/> PDF notes & textbooks</div><div className="flex items-center gap-2"><ImagePlus size={13}/> Photos of handwritten notes</div><div className="flex items-center gap-2"><Lightbulb size={13}/> Explain • revise • quiz</div></div></div>
           </div>
           <div className="mt-7 flex items-center gap-2 rounded-2xl border border-white/[.08] bg-white/[.025] p-2"><Sparkles size={16} className="ml-2 shrink-0 text-violet-300/70"/><input value={topic} onChange={(e) => { setTopic(e.target.value); sessionStorage.setItem("theon-study-topic", e.target.value); }} placeholder="What subject are you studying? e.g. Operating Systems" className="min-w-0 flex-1 bg-transparent px-2 py-3 text-xs outline-none placeholder:text-white/20"/></div>
-          <div className="mt-3 flex flex-wrap items-center gap-2"><button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 rounded-xl border border-white/[.08] bg-white/[.025] px-3.5 py-2.5 text-xs text-white/60 transition hover:border-violet-300/20 hover:bg-violet-400/[.05] hover:text-white"><Paperclip size={14}/> Add PDF / photo</button><span className="text-[10px] text-white/20">Up to 4 materials</span><input ref={fileInputRef} type="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={addFiles}/></div>
+          <div className="mt-3 flex flex-wrap items-center gap-2"><button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 rounded-xl border border-white/[.08] bg-white/[.025] px-3.5 py-2.5 text-xs text-white/60 transition hover:border-violet-300/20 hover:bg-violet-400/[.05] hover:text-white"><Paperclip size={14}/> Add PDF / photo</button><span className="text-[10px] text-white/20">Up to 4 materials</span><input ref={fileInputRef} type="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={addFiles}/></div>
           {attachments.length > 0 && <MaterialStrip attachments={attachments} onRemove={removeAttachment}/>} 
-          <div className="mt-6 grid gap-2 sm:grid-cols-2">{quickPrompts.map(([label, text]) => <button key={label} onClick={() => setInput(text)} className="group flex items-center justify-between rounded-2xl border border-white/[.07] bg-white/[.02] px-4 py-3.5 text-left hover:border-violet-300/20 hover:bg-violet-400/[.04]"><span><span className="block text-xs font-medium text-white/75">{label}</span><span className="mt-1 block text-[10px] text-white/25">{text}</span></span><ChevronRight size={14} className="text-white/20 group-hover:text-violet-300/70"/></button>)}</div>
+          <div className="mt-6 grid gap-2 sm:grid-cols-2">{quickPrompts.map(([label, text]) => <button type="button" key={label} onClick={() => setInput(text)} className="group flex items-center justify-between rounded-2xl border border-white/[.07] bg-white/[.02] px-4 py-3.5 text-left hover:border-violet-300/20 hover:bg-violet-400/[.04]"><span><span className="block text-xs font-medium text-white/75">{label}</span><span className="mt-1 block text-[10px] text-white/25">{text}</span></span><ChevronRight size={14} className="text-white/20 group-hover:text-violet-300/70"/></button>)}</div>
         </div> : <div className="mx-auto max-w-3xl space-y-7 pb-8">
           {topic && <div className="flex items-center gap-2 text-[10px] uppercase tracking-[.16em] text-white/25"><BookOpen size={12}/> Studying: <span className="text-violet-300/60">{topic}</span></div>}
           {messages.map((msg, index) => <div key={`${msg.role}-${index}`} className={msg.role === "user" ? "flex justify-end" : "flex gap-3"}>{msg.role === "ai" && <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-violet-300/15 bg-violet-400/[.06] text-violet-300"><GraduationCap size={15}/></div>}{msg.role === "user" ? <div className="max-w-[88%] rounded-2xl rounded-br-md border border-violet-400/20 bg-violet-500/[.12] px-4 py-3 text-sm leading-6 text-white/90">{msg.attachments?.length ? <MaterialStrip attachments={msg.attachments} compact onRemove={() => {}}/> : null}{msg.text}</div> : <div className="min-w-0 flex-1 rounded-2xl border border-white/[.07] bg-white/[.025] px-4 py-4 sm:px-5"><Answer text={msg.text}/></div>}</div>)}

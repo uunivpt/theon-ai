@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import ThemeSync from "@/components/ThemeSync";
@@ -10,17 +10,26 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Theon AI",
-  description: "Theon AI - Intelligent AI Assistant",
+  title: "Theon AI — Your intelligent workspace",
+  description: "Theon AI is a powerful AI assistant and study workspace for thinking, learning, researching, creating, and solving problems.",
+  applicationName: "Theon AI",
+  colorScheme: "dark light",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#07070A",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col bg-[#07070a]">
         <ThemeSync />
         <AuthenticatedApiBridge />
-        {children}
+        <div className="theon-app-shell min-h-[100dvh] flex-1">{children}</div>
         <Analytics />
       </body>
     </html>

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { BookOpen, ChevronDown, LogOut, Moon, Settings, Sun, UserRound, Sparkles } from "lucide-react";
+import { BookOpen, ChevronDown, LogOut, Moon, Settings, Sun, UserRound } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";

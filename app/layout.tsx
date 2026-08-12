@@ -13,13 +13,13 @@ export const metadata: Metadata = {
   title: "Theon AI — Your intelligent workspace",
   description: "Theon AI is a powerful AI assistant and study workspace for thinking, learning, researching, creating, and solving problems.",
   applicationName: "Theon AI",
-  colorScheme: "dark light",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  colorScheme: "dark light",
   themeColor: "#07070A",
 };
 

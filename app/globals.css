@@ -1,17 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #07111f;
-  --foreground: #eef7ff;
-  --surface: #0b1929;
-  --surface-2: #102238;
-  --line: rgba(142, 196, 255, .14);
-  --muted: #8298ae;
-  --accent: #39e7c4;
-  --accent-2: #58a6ff;
-  --accent-3: #a78bfa;
-  --danger: #ff7188;
-  --ring: rgba(57, 231, 196, .30);
+  --background: #0a0b10;
+  --foreground: #f5f7fb;
+  --surface: #11131a;
+  --surface-2: #171a23;
+  --line: rgba(255,255,255,.085);
+  --muted: #8b93a3;
+  --accent: #7c5cff;
+  --accent-2: #43d9ff;
+  --ring: rgba(124,92,255,.28);
 }
 
 @theme inline {
@@ -24,132 +22,44 @@
 * { box-sizing: border-box; }
 html { min-height: 100%; background: var(--background); color-scheme: dark; }
 body {
-  min-height: 100%; margin: 0; color: var(--foreground);
+  min-height: 100%; margin: 0; background: var(--background); color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
-  background:
-    radial-gradient(900px 600px at 12% -10%, rgba(88,166,255,.18), transparent 62%),
-    radial-gradient(850px 620px at 92% 12%, rgba(57,231,196,.10), transparent 62%),
-    linear-gradient(145deg, #07111f 0%, #081524 48%, #06101b 100%);
 }
-
-::selection { background: rgba(57,231,196,.28); color: white; }
+::selection { background: rgba(124,92,255,.28); color: #fff; }
 button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
-button, a { transition: transform .18s ease, background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease, opacity .18s ease; }
+button, a { transition: transform .16s ease, background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, opacity .16s ease; }
 button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* THEON // AURORA COMMAND CENTER
-   Global visual replacement: midnight-blue glass, mint/cyan energy accents, larger hierarchy,
-   clearer navigation, softer surfaces, and stronger responsive separation. */
-main { background: transparent !important; }
-main::before {
-  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: -1;
-  background:
-    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
-  background-size: 56px 56px; mask-image: linear-gradient(to bottom, black, transparent 85%);
-}
+.theon-surface { background: var(--surface); border: 1px solid var(--line); box-shadow: 0 18px 50px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.025); }
+.theon-glass { background: color-mix(in srgb, var(--surface) 84%, transparent); border: 1px solid var(--line); backdrop-filter: blur(18px); }
 
-/* Desktop chrome */
-main > div:first-child aside,
-aside { background: rgba(5,16,29,.72) !important; border-color: var(--line) !important; backdrop-filter: blur(24px); }
-main header,
-header { background: rgba(7,17,31,.72) !important; border-color: var(--line) !important; backdrop-filter: blur(24px); }
-
-/* Surfaces */
-main [class*="rounded-3xl"], main [class*="rounded-[28px]"], main [class*="rounded-2xl"] {
-  border-color: var(--line) !important;
-  box-shadow: 0 24px 70px rgba(0,0,0,.20), inset 0 1px 0 rgba(255,255,255,.035);
-}
-main [class*="bg-white/[0.03]"], main [class*="bg-white/[.03]"],
-main [class*="bg-white/[0.035]"], main [class*="bg-white/[.035]"],
-main [class*="bg-white/[0.04]"], main [class*="bg-white/[.04]"],
-main [class*="bg-white/[0.045]"], main [class*="bg-white/[.045]"],
-main [class*="bg-white/[0.055]"], main [class*="bg-white/[.055]"] {
-  background: linear-gradient(145deg, rgba(18,39,62,.72), rgba(8,23,39,.54)) !important;
-  backdrop-filter: blur(20px);
-}
-
-/* Typography recolor */
-main [class*="text-white"] { color: #edf7ff !important; }
-main [class*="text-white/30"], main [class*="text-white/25"], main [class*="text-white/20"] { color: #71879d !important; }
-main [class*="text-white/40"], main [class*="text-white/45"], main [class*="text-white/50"] { color: #8aa1b7 !important; }
-
-/* Inputs / composer */
-main input, main textarea, main select {
-  color: var(--foreground) !important; border-color: rgba(142,196,255,.16) !important;
-  background: rgba(8,24,40,.72) !important;
-}
-main input:focus, main textarea:focus, main select:focus {
-  border-color: rgba(57,231,196,.55) !important; box-shadow: 0 0 0 4px rgba(57,231,196,.08) !important;
-}
-main input::placeholder, main textarea::placeholder { color: #6e8499 !important; }
-
-/* Accent action replacement */
-main button[class*="bg-gradient-to-r"], main button[class*="bg-gradient-to-br"] {
-  background-image: linear-gradient(135deg, #39e7c4, #58a6ff) !important;
-  color: #04131c !important; box-shadow: 0 12px 36px rgba(57,231,196,.18);
-}
-main button[class*="bg-gradient-to-r"]:hover, main button[class*="bg-gradient-to-br"]:hover { transform: translateY(-2px); filter: brightness(1.06); }
-
-/* Replace violet accents with the new mint/cyan identity */
-main [class*="text-violet"], main [class*="text-purple"] { color: #70f3d7 !important; }
-main [class*="bg-violet"], main [class*="bg-purple"] { background-color: rgba(57,231,196,.09) !important; }
-main [class*="border-violet"], main [class*="border-purple"] { border-color: rgba(57,231,196,.22) !important; }
-main [class*="from-violet"], main [class*="from-purple"] { --tw-gradient-from: #39e7c4 !important; }
-main [class*="to-cyan"] { --tw-gradient-to: #58a6ff !important; }
-
-/* Cards gain a thin energy edge on hover */
-main button[class*="rounded-2xl"], main button[class*="rounded-[19px]"], main button[class*="rounded-[20px]"] { position: relative; overflow: hidden; }
-main button[class*="rounded-2xl"]:hover, main button[class*="rounded-[19px]"]:hover, main button[class*="rounded-[20px]"]:hover {
-  border-color: rgba(57,231,196,.34) !important; transform: translateY(-2px);
-  box-shadow: 0 18px 45px rgba(0,0,0,.24), 0 0 0 1px rgba(57,231,196,.05);
-}
-
-/* Sidebar navigation feel */
-aside button { border-color: transparent !important; }
-aside button:hover { background: rgba(57,231,196,.07) !important; }
-aside button[class*="bg-white/[0.07]"], aside button[class*="bg-white/[.07]"] {
-  background: linear-gradient(90deg, rgba(57,231,196,.13), rgba(88,166,255,.06)) !important;
-  border-color: rgba(57,231,196,.18) !important;
-}
-
-/* Mobile shell */
-.tablet-mobile-shell { background: transparent !important; }
-
-/* Scrollbars */
-* { scrollbar-width: thin; scrollbar-color: rgba(117,171,212,.22) transparent; }
+* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.13) transparent; }
 *::-webkit-scrollbar { width: 7px; height: 7px; }
 *::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: rgba(117,171,212,.20); border-radius: 999px; }
-*::-webkit-scrollbar-thumb:hover { background: rgba(57,231,196,.45); }
+*::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(124,92,255,.35); }
 
 .katex-display { display:block; overflow-x:auto; overflow-y:hidden; max-width:100%; white-space:nowrap; }
 .prose { max-width:100%; }
 .prose p, .prose div { overflow-wrap:anywhere; }
 .prose img, .prose table, .prose pre { max-width:100%; overflow-x:auto; }
 
-@media (max-width: 1023px) {
-  body { background:
-    radial-gradient(500px 400px at 50% -5%, rgba(88,166,255,.16), transparent 68%),
-    radial-gradient(450px 400px at 100% 100%, rgba(57,231,196,.08), transparent 68%), #07111f; }
-  main::before { background-size: 42px 42px; opacity: .55; }
-}
-
-@media (max-width: 640px) {
-  main [class*="rounded-3xl"], main [class*="rounded-[28px]"] { border-radius: 20px !important; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
-}
-
 html.light {
-  --background: #eef6f8; --foreground: #10202b; --surface: #ffffff; --surface-2: #e4eff2;
-  --line: rgba(25,64,78,.13); --muted: #607681; --accent: #079f8a; --accent-2: #2479d8; color-scheme: light;
+  --background: #f5f7fb; --foreground: #111827; --surface: #ffffff; --surface-2: #eef1f6;
+  --line: rgba(17,24,39,.10); --muted: #667085; --accent: #6941ff; --accent-2: #0891b2;
+  --ring: rgba(105,65,255,.20); color-scheme: light;
 }
-html.light body { background: radial-gradient(900px 600px at 15% -10%, rgba(36,121,216,.14), transparent 65%), radial-gradient(800px 600px at 90% 0%, rgba(7,159,138,.10), transparent 65%), #eef6f8; }
-html.light main [class*="bg-black"] { background-color: rgba(238,246,248,.86) !important; }
-html.light main [class*="text-white"] { color: #10202b !important; }
-html.light main input, html.light main textarea, html.light main select { background: rgba(255,255,255,.9) !important; color: #10202b !important; }
-html.light aside, html.light header { background: rgba(255,255,255,.72) !important; }
+html.light body { background: radial-gradient(800px 500px at 20% -10%, rgba(105,65,255,.10), transparent 68%), radial-gradient(700px 500px at 90% 10%, rgba(8,145,178,.07), transparent 65%), var(--background); }
+html.light .theon-surface { box-shadow: 0 18px 50px rgba(16,24,40,.07), inset 0 1px 0 rgba(255,255,255,.9); }
+html.light [class*="bg-black"] { background-color: var(--background) !important; }
+html.light [class*="bg-[#0b0b0b]"], html.light [class*="bg-[#090909]"] { background-color: rgba(255,255,255,.96) !important; }
+html.light [class*="text-white"] { color: #111827 !important; }
+html.light [class*="text-white/30"], html.light [class*="text-white/25"], html.light [class*="text-white/20"] { color: #667085 !important; }
+html.light [class*="border-white"] { border-color: rgba(17,24,39,.10) !important; }
+html.light [class*="bg-white/"] { background-color: rgba(17,24,39,.035) !important; }
+html.light input, html.light textarea, html.light select { color: #111827 !important; background-color: rgba(255,255,255,.92) !important; border-color: rgba(17,24,39,.12) !important; }
+html.light input::placeholder, html.light textarea::placeholder { color: #98a2b3 !important; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; } }
+@media (max-width: 640px) { .theon-surface, .theon-glass { border-radius: 20px; } }

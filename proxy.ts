@@ -61,7 +61,7 @@ export async function proxy(request: NextRequest) {
     const global = await consumeDistributedLimit(`global:${pathname}`, pathname === "/api/generate-image" ? 300 : 3000, 60);
     if (!global.allowed) {
       const status = global.unavailable ? 503 : 429;
-      return secure(NextResponse.json({ error: distributed.unavailable ? "Traffic protection is temporarily unavailable. Please retry shortly." : "The service is busy. Please retry shortly." }, { status, headers: { "Retry-After": String(global.retryAfter) } }), requestId);
+      return secure(NextResponse.json({ error: global.unavailable ? "Traffic protection is temporarily unavailable. Please retry shortly." : "The service is busy. Please retry shortly." }, { status, headers: { "Retry-After": String(global.retryAfter) } }), requestId);
     }
   }
 

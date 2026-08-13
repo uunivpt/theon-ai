@@ -24,7 +24,7 @@ async function getGoogleAccessToken() {
   const signer = createSign("RSA-SHA256");
   signer.update(unsigned);
   signer.end();
-  const assertion = `${unsigned}.${base64Url(signer.sign(account.private_key))}`;
+  const assertion = `${unsigned}.${base64Url(signer.sign(account.private_key as string))}`;
 
   const response = await fetch(TOKEN_ENDPOINT, {
     method: "POST",

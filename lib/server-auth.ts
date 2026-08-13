@@ -1,3 +1,4 @@
+import { requireFirebaseAppCheck, AppCheckError } from "@/lib/app-check";
 import { verifyFirebaseIdToken } from "@/lib/security";
 
 const FIREBASE_AUTH_API = "https://identitytoolkit.googleapis.com/v1/accounts:lookup";
@@ -54,9 +55,26 @@ export async function requireFirebaseUser(request: Request): Promise<Authenticat
   };
 }
 
+/**
+ * Strong mode: once FIREBASE_APPCHECK_ENFORCE=true is enabled in production,
+ * authenticated requests must prove both user identity and genuine-app attestation.
+ */
+export async function requireRequestSecurity(request: Request, options?: { consumeAppCheck?: boolean }) {
+  const user = await requireFirebaseUser(request);
+  const enforceAppCheck = process.env.FIREBASE_APPCHECK_ENFORCE === "true";
+  if (enforceAppCheck) {
+    try {
+      await requireFirebaseAppCheck(request, { consume: options?.consumeAppCheck === true });
+    } catch (error) {
+      if (error instanceof AppCheckError) throw error;
+      throw new AuthError("App verification failed.", 401);
+    }
+  }
+  return user;
+}
+
 export class AuthError extends Error {
   readonly status: number;
-
   constructor(message: string, status: number) {
     super(message);
     this.name = "AuthError";

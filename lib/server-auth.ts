@@ -48,29 +48,20 @@ export async function requireFirebaseUser(request: Request): Promise<Authenticat
   if (String(user.localId) !== String(claims.sub)) throw new AuthError("Invalid authentication subject.", 401);
   if (user.disabled === true) throw new AuthError("This account is disabled.", 403);
 
-  return {
-    uid: String(claims.sub),
-    email: typeof user.email === "string" ? user.email : undefined,
-    emailVerified: user.emailVerified === true,
-  };
-}
-
-/**
- * Strong mode: once FIREBASE_APPCHECK_ENFORCE=true is enabled in production,
- * authenticated requests must prove both user identity and genuine-app attestation.
- */
-export async function requireRequestSecurity(request: Request, options?: { consumeAppCheck?: boolean }) {
-  const user = await requireFirebaseUser(request);
-  const enforceAppCheck = process.env.FIREBASE_APPCHECK_ENFORCE === "true";
-  if (enforceAppCheck) {
+  if (process.env.FIREBASE_APPCHECK_ENFORCE === "true") {
     try {
-      await requireFirebaseAppCheck(request, { consume: options?.consumeAppCheck === true });
+      await requireFirebaseAppCheck(request);
     } catch (error) {
       if (error instanceof AppCheckError) throw error;
       throw new AuthError("App verification failed.", 401);
     }
   }
-  return user;
+
+  return {
+    uid: String(claims.sub),
+    email: typeof user.email === "string" ? user.email : undefined,
+    emailVerified: user.emailVerified === true,
+  };
 }
 
 export class AuthError extends Error {

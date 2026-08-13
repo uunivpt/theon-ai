@@ -4,6 +4,7 @@ const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL?.replace(/\/$/, "");
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
 function configured() { return Boolean(REDIS_URL && REDIS_TOKEN); }
+function requireDistributed() { return process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT === "true"; }
 
 async function redis<T>(command: string[]) {
   if (!REDIS_URL || !REDIS_TOKEN) throw new Error("Distributed rate limiter is not configured.");
@@ -22,9 +23,7 @@ async function redis<T>(command: string[]) {
 
 export async function consumeDistributedLimit(key: string, limit: number, windowSeconds: number) {
   if (!configured()) {
-    if (process.env.NODE_ENV === "production" && process.env.ALLOW_LOCAL_RATE_LIMIT_FALLBACK !== "true") {
-      return { allowed: false, retryAfter: 30, unavailable: true };
-    }
+    if (requireDistributed()) return { allowed: false, retryAfter: 30, unavailable: true };
     return { allowed: true, retryAfter: 0, unavailable: true };
   }
 
@@ -38,9 +37,7 @@ export async function consumeDistributedLimit(key: string, limit: number, window
     return { allowed: count <= limit, retryAfter: count <= limit ? 0 : retryAfter, unavailable: false };
   } catch (error) {
     console.error("Distributed rate limiter unavailable", error instanceof Error ? error.message : "unknown");
-    if (process.env.NODE_ENV === "production" && process.env.ALLOW_LOCAL_RATE_LIMIT_FALLBACK !== "true") {
-      return { allowed: false, retryAfter: 15, unavailable: true };
-    }
+    if (requireDistributed()) return { allowed: false, retryAfter: 15, unavailable: true };
     return { allowed: true, retryAfter: 0, unavailable: true };
   }
 }

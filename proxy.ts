@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { consumeDistributedLimit } from "@/lib/distributed-rate-limit";
 import { consumeRateLimit, cleanupRateStore, getClientIp, requestContentLength, sameOrigin } from "@/lib/security";
 
 const API_BODY_LIMITS: Record<string, number> = {
@@ -26,10 +27,11 @@ function secure(response: NextResponse, requestId: string) {
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("Cross-Origin-Resource-Policy", "same-origin");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
   return response;
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   cleanupRateStore();
   const pathname = request.nextUrl.pathname;
   const requestId = crypto.randomUUID();
@@ -63,11 +65,27 @@ export function proxy(request: NextRequest) {
       return secure(NextResponse.json({ error: "Authentication required." }, { status: 401 }), requestId);
     }
 
+    if (process.env.FIREBASE_APPCHECK_ENFORCE === "true" && !request.headers.get("x-firebase-appcheck")) {
+      return secure(NextResponse.json({ error: "App verification required." }, { status: 401 }), requestId);
+    }
+
     const ip = getClientIp(request);
-    const limit = pathname === "/api/generate-image" ? 6 : 20;
-    const rate = consumeRateLimit(`${pathname}:${ip}`, limit, 10_000);
-    if (!rate.allowed) {
-      return secure(NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429, headers: { "Retry-After": String(rate.retryAfter) } }), requestId);
+    const perIpLimit = pathname === "/api/generate-image" ? 6 : 20;
+    const localRate = consumeRateLimit(`${pathname}:${ip}`, perIpLimit, 10_000);
+    if (!localRate.allowed) {
+      return secure(NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429, headers: { "Retry-After": String(localRate.retryAfter) } }), requestId);
+    }
+
+    const distributed = await consumeDistributedLimit(`ip:${ip}:${pathname}`, pathname === "/api/generate-image" ? 30 : 120, 60);
+    if (!distributed.allowed) {
+      const status = distributed.unavailable ? 503 : 429;
+      return secure(NextResponse.json({ error: distributed.unavailable ? "Traffic protection is temporarily unavailable. Please retry shortly." : "Too many requests. Please slow down." }, { status, headers: { "Retry-After": String(distributed.retryAfter) } }), requestId);
+    }
+
+    const global = await consumeDistributedLimit(`global:${pathname}`, pathname === "/api/generate-image" ? 300 : 3000, 60);
+    if (!global.allowed) {
+      const status = global.unavailable ? 503 : 429;
+      return secure(NextResponse.json({ error: global.unavailable ? "Traffic protection is temporarily unavailable. Please retry shortly." : "The service is busy. Please retry shortly." }, { status, headers: { "Retry-After": String(global.retryAfter) } }), requestId);
     }
   }
 
